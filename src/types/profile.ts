@@ -1,0 +1,20 @@
+/** 프로필 및 기술 스택 관련 타입 정의 */
+
+export interface Profile {
+  name: string
+  title: string
+  bio?: string
+  email?: string
+  github?: string
+  linkedin?: string
+  /** Memoji 스타일 프로필 이미지 경로 */
+  avatarImage?: string
+  /** 이미지 없을 때 fallback 이모지 */
+  avatarEmoji?: string
+}
+
+export interface Skill {
+  id: string
+  name: string
+  category: 'frontend' | 'backend' | 'devops' | 'design' | 'other'
+}

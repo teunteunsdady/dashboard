@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface font-sans text-text-primary antialiased;
+  }
+}
+
+/* CLI 페이지 커서 애니메이션 */
+@keyframes cliCursorBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.cli-cursor {
+  animation: cliCursorBlink 1s steps(1) infinite;
+}
+
+/* FullCalendar 청량 블루 테마 커스텀 */
+.calendar-wrapper .fc {
+  --fc-border-color: #e2e8f0;
+  --fc-today-bg-color: rgb(14 98 247 / 0.06);
+  --fc-button-bg-color: #0e62f7;
+  --fc-button-border-color: #0e62f7;
+  --fc-button-hover-bg-color: #0b4fc4;
+  --fc-button-hover-border-color: #0b4fc4;
+  --fc-button-active-bg-color: #0b4fc4;
+  --fc-button-active-border-color: #0b4fc4;
+  --fc-event-border-color: transparent;
+  --fc-page-bg-color: transparent;
+  font-family: inherit;
+}
+
+.calendar-wrapper .fc .fc-toolbar-title {
+  @apply text-lg font-semibold text-text-primary;
+}
+
+.calendar-wrapper .fc .fc-col-header-cell-cushion,
+.calendar-wrapper .fc .fc-daygrid-day-number {
+  @apply text-sm text-text-secondary;
+}
+
+.calendar-wrapper .fc .fc-button {
+  @apply rounded-lg text-sm font-medium shadow-none;
+}
+
+.calendar-wrapper .fc .fc-daygrid-event {
+  @apply rounded-md text-xs font-semibold transition-transform duration-150;
+}
+
+.calendar-wrapper .fc .fc-daygrid-event:hover {
+  transform: translateY(-1px);
+}
+
+.calendar-wrapper .fc .fc-timegrid-slot-label-cushion {
+  @apply text-xs text-text-secondary;
+}
+
+.calendar-wrapper .fc .fc-event {
+  box-shadow: 0 4px 10px -6px rgb(14 98 247 / 0.7);
+  border-width: 0 !important;
+  position: relative;
+  overflow: visible !important;
+}
+
+/* 해결 2: Calendar 경계를 넘어도 툴팁이 보이도록 허용 */
+.calendar-wrapper,
+.calendar-wrapper .fc,
+.calendar-wrapper .fc .fc-view-harness,
+.calendar-wrapper .fc .fc-scroller,
+.calendar-wrapper .fc .fc-daygrid-body,
+.calendar-wrapper .fc .fc-daygrid-body-natural {
+  overflow: visible !important;
+}
+
+/* 일반 바형 이벤트는 흰색 텍스트 유지 */
+.calendar-wrapper .fc .fc-h-event {
+  color: #fff !important;
+}
+
+/* 월간 점형 이벤트는 어두운 텍스트로 가독성 확보 */
+.calendar-wrapper .fc .fc-daygrid-dot-event {
+  color: #334155 !important;
+}
+
+/* 주간 뷰 시간 슬롯/이벤트 높이 보정 */
+.calendar-wrapper .fc .fc-timegrid-slot {
+  height: 1.75rem;
+}
+
+.calendar-wrapper .fc .fc-timegrid-event {
+  min-height: 0 !important;
+}
+
