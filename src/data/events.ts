@@ -2,7 +2,7 @@ import type { CalendarEvent, EventCategoryMeta } from '../types/calendar'
 
 /** 일정 카테고리 메타 정보 (색상·라벨) */
 export const eventCategories: EventCategoryMeta[] = [
-  { id: 'personal', label: '개인', color: '#CA8A04' },
+  { id: 'personal', label: '개인', color: '#FACC15' },
   { id: 'finance', label: '금융', color: '#F97316' },
   { id: 'subscription', label: '구독', color: '#A855F7' },
   { id: 'career', label: '취업', color: '#EF4444' },

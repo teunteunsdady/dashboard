@@ -12,6 +12,36 @@
   }
 }
 
+/* 모바일 네비 메뉴 */
+@keyframes mobileBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobileMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.mobile-backdrop-enter {
+  animation: mobileBackdropIn 0.28s ease-out;
+}
+
+.mobile-menu-enter {
+  animation: mobileMenuIn 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+}
+
 /* CLI 페이지 커서 애니메이션 */
 @keyframes cliCursorBlink {
   0%,
@@ -130,9 +160,9 @@
   overflow: visible !important;
 }
 
-/* 일반 바형 이벤트는 흰색 텍스트 유지 */
-.calendar-wrapper .fc .fc-h-event {
-  color: #fff !important;
+/* 일정별 textColor 속성 사용 (밝은 노란색 등은 어두운 텍스트) */
+.calendar-wrapper .fc .fc-h-event .fc-event-title {
+  color: inherit;
 }
 
 /* 월간 점형 이벤트는 어두운 텍스트로 가독성 확보 */

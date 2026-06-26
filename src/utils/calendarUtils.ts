@@ -1,9 +1,11 @@
 import type { EventInput } from '@fullcalendar/core'
 import type { CalendarEvent, EventCategoryMeta } from '../types/calendar'
 
-/** 활성 칩 위 텍스트·동그라미 색 (모든 카테고리 흰색 통일) */
-export function getCategoryTextColor(_color: string): string {
-  return '#FFFFFF'
+const LIGHT_CATEGORY_COLORS = new Set(['#FACC15'])
+
+/** 활성 칩·달력 일정 위 텍스트 색 */
+export function getCategoryTextColor(color: string): string {
+  return LIGHT_CATEGORY_COLORS.has(color.toUpperCase()) ? '#0F172A' : '#FFFFFF'
 }
 
 /** 활성 칩 앞 동그라미 색 — 배경과 대비되도록 텍스트 색과 통일 */
