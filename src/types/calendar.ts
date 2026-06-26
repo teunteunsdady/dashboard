@@ -2,9 +2,11 @@
 
 export type EventCategory =
   | 'personal'
-  | 'asset'
+  | 'finance'
   | 'subscription'
-  | 'project'
+  | 'career'
+  | 'family'
+  | 'church'
 
 export interface CalendarEvent {
   id: string

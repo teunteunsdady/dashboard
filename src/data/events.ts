@@ -2,10 +2,12 @@ import type { CalendarEvent, EventCategoryMeta } from '../types/calendar'
 
 /** 일정 카테고리 메타 정보 (색상·라벨) */
 export const eventCategories: EventCategoryMeta[] = [
-  { id: 'personal', label: '개인 일정', color: '#007AFF' },
-  { id: 'asset', label: '자산 일정', color: '#F59E0B' },
-  { id: 'subscription', label: '구독 스케줄', color: '#A855F7' },
-  { id: 'project', label: '프로젝트 스프린트', color: '#22C55E' },
+  { id: 'personal', label: '개인', color: '#CA8A04' },
+  { id: 'finance', label: '금융', color: '#F97316' },
+  { id: 'subscription', label: '구독', color: '#A855F7' },
+  { id: 'career', label: '취업', color: '#EF4444' },
+  { id: 'family', label: '가족', color: '#22C55E' },
+  { id: 'church', label: '교회', color: '#3B82F6' },
 ]
 
 /** 캘린더 일정 Mock 데이터 (최초 로드 시 시드) */
@@ -22,7 +24,7 @@ export const eventsData: CalendarEvent[] = [
     id: '2',
     title: '주식 배당금 입금',
     start: '2026-06-28',
-    category: 'asset',
+    category: 'finance',
     allDay: true,
   },
   {
@@ -34,18 +36,26 @@ export const eventsData: CalendarEvent[] = [
   },
   {
     id: '4',
-    title: 'Sprint 3 마감',
+    title: '기술 면접',
     start: '2026-07-05',
-    end: '2026-07-07',
-    category: 'project',
-    allDay: true,
+    end: '2026-07-05',
+    category: 'career',
+    allDay: false,
   },
   {
     id: '5',
-    title: '주간 스탠드업',
-    start: '2026-06-26T10:00',
-    end: '2026-06-26T10:30',
-    category: 'project',
+    title: '가족 외식',
+    start: '2026-06-26T18:00',
+    end: '2026-06-26T20:00',
+    category: 'family',
+    allDay: false,
+  },
+  {
+    id: '6',
+    title: '주일 예배',
+    start: '2026-06-29T10:00',
+    end: '2026-06-29T12:00',
+    category: 'church',
     allDay: false,
   },
 ]

@@ -1,4 +1,5 @@
 import type { EventCategory, EventCategoryMeta } from "../../types/calendar";
+import { getCategoryDotColor, getCategoryTextColor } from "../../utils/calendarUtils";
 
 interface CategoryFilterProps {
   categories: EventCategoryMeta[];
@@ -24,15 +25,22 @@ export function CategoryFilter({
             className={[
               "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
               isActive
-                ? "border-transparent text-white shadow-sm"
+                ? "border-transparent shadow-sm"
                 : "border-border bg-surface text-text-secondary opacity-60 hover:opacity-100",
             ].join(" ")}
-            style={isActive ? { backgroundColor: cat.color } : undefined}
+            style={
+              isActive
+                ? {
+                    backgroundColor: cat.color,
+                    color: getCategoryTextColor(cat.color),
+                  }
+                : undefined
+            }
           >
             <span
               className="h-2 w-2 rounded-full"
               style={{
-                backgroundColor: isActive ? "#fff" : cat.color,
+                backgroundColor: getCategoryDotColor(cat.color, isActive),
               }}
             />
             {cat.label}

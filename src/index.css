@@ -52,12 +52,57 @@
   @apply text-sm text-text-secondary;
 }
 
+/* 일요일 빨간색, 토요일 파란색 */
+.calendar-wrapper .fc .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion,
+.calendar-wrapper .fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number {
+  color: #ef4444;
+}
+
+.calendar-wrapper .fc .fc-col-header-cell.fc-day-sat .fc-col-header-cell-cushion,
+.calendar-wrapper .fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number {
+  color: #3b82f6;
+}
+
+.calendar-wrapper .fc .fc-daygrid-day.fc-day-sun.fc-day-today .fc-daygrid-day-number,
+.calendar-wrapper .fc .fc-daygrid-day.fc-day-sat.fc-day-today .fc-daygrid-day-number {
+  font-weight: 600;
+}
+
 .calendar-wrapper .fc .fc-button {
   @apply rounded-lg text-sm font-medium shadow-none;
 }
 
 .calendar-wrapper .fc .fc-daygrid-event {
   @apply rounded-md text-xs font-semibold transition-transform duration-150;
+  justify-content: center;
+  text-align: center;
+}
+
+.calendar-wrapper .fc .fc-daygrid-event .fc-event-main,
+.calendar-wrapper .fc .fc-daygrid-event .fc-event-main-frame,
+.calendar-wrapper .fc .fc-timegrid-event .fc-event-main,
+.calendar-wrapper .fc .fc-timegrid-event .fc-event-main-frame {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.calendar-wrapper .fc .fc-event-title-container {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.calendar-wrapper .fc .fc-event-title {
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-wrapper .fc .fc-daygrid-dot-event {
+  justify-content: center;
 }
 
 .calendar-wrapper .fc .fc-daygrid-event:hover {
@@ -102,5 +147,24 @@
 
 .calendar-wrapper .fc .fc-timegrid-event {
   min-height: 0 !important;
+}
+
+/* 커스텀 Date/Time picker 스크롤바 */
+.picker-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(14 98 247 / 0.35) transparent;
+}
+
+.picker-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.picker-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgb(14 98 247 / 0.35);
+}
+
+.picker-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 

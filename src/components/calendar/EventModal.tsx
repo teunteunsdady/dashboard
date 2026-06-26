@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import type { CalendarEvent, EventCategory, EventCategoryMeta } from '../../types/calendar'
 import {
   buildEventDateTime,
+  getCategoryDotColor,
+  getCategoryTextColor,
   isAllDayEvent,
   toDatetimeLocal,
 } from '../../utils/calendarUtils'
+import { DatePicker } from '../ui/DatePicker'
 import { Modal } from '../ui/Modal'
+import { TimePicker } from '../ui/TimePicker'
 
 export type EventModalMode = 'create' | 'edit'
 
@@ -50,6 +54,9 @@ const emptyForm = (defaultStart?: string): EventForm => {
     description: '',
   }
 }
+
+const fieldClass =
+  'w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-main focus:ring-2 focus:ring-main/20'
 
 /** 일정 추가/수정/삭제 모달 — 종일·시간 지정 지원 */
 export function EventModal({
@@ -140,13 +147,12 @@ export function EventModal({
             required
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
+            className={fieldClass}
             placeholder="일정 제목을 입력하세요"
           />
         </div>
 
-        {/* 종일 일정 토글 */}
-        <label className="flex cursor-pointer items-center gap-2">
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5">
           <input
             type="checkbox"
             checked={form.allDay}
@@ -157,86 +163,49 @@ export function EventModal({
         </label>
 
         {form.allDay ? (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-primary">
-                시작일
-              </label>
-              <input
-                type="date"
-                required
-                value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-text-primary">
-                종료일
-              </label>
-              <input
-                type="date"
-                value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <DatePicker
+              label="시작일"
+              value={form.startDate}
+              onChange={(startDate) => setForm({ ...form, startDate })}
+              required
+            />
+            <DatePicker
+              label="종료일"
+              value={form.endDate}
+              onChange={(endDate) => setForm({ ...form, endDate })}
+              placeholder="선택 안 함"
+            />
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-text-primary">
-                  시작일
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={form.startDate}
-                  onChange={(e) =>
-                    setForm({ ...form, startDate: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-text-primary">
-                  시작 시간
-                </label>
-                <input
-                  type="time"
-                  required
-                  value={form.startTime}
-                  onChange={(e) =>
-                    setForm({ ...form, startTime: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
-                />
-              </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DatePicker
+                label="시작일"
+                value={form.startDate}
+                onChange={(startDate) => setForm({ ...form, startDate })}
+                required
+              />
+              <TimePicker
+                label="시작 시간"
+                value={form.startTime}
+                onChange={(startTime) => setForm({ ...form, startTime })}
+                required
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-text-primary">
-                  종료일
-                </label>
-                <input
-                  type="date"
-                  value={form.endDate}
-                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-text-primary">
-                  종료 시간
-                </label>
-                <input
-                  type="time"
-                  value={form.endTime}
-                  onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
-                />
-              </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DatePicker
+                label="종료일"
+                value={form.endDate}
+                onChange={(endDate) => setForm({ ...form, endDate })}
+                placeholder="선택 안 함"
+              />
+              <TimePicker
+                label="종료 시간"
+                value={form.endTime}
+                onChange={(endTime) => setForm({ ...form, endTime })}
+                placeholder="선택 안 함"
+              />
             </div>
           </>
         )}
@@ -245,19 +214,40 @@ export function EventModal({
           <label className="mb-1.5 block text-sm font-medium text-text-primary">
             카테고리
           </label>
-          <select
-            value={form.category}
-            onChange={(e) =>
-              setForm({ ...form, category: e.target.value as EventCategory })
-            }
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
-          >
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {categories.map((cat) => {
+              const selected = form.category === cat.id
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setForm({ ...form, category: cat.id })}
+                  className={[
+                    'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all',
+                    selected
+                      ? 'border-transparent text-white shadow-sm'
+                      : 'border-border bg-surface text-text-secondary hover:border-main/30',
+                  ].join(' ')}
+                  style={
+                    selected
+                      ? {
+                          backgroundColor: cat.color,
+                          color: getCategoryTextColor(cat.color),
+                        }
+                      : undefined
+                  }
+                >
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: getCategoryDotColor(cat.color, selected),
+                    }}
+                  />
+                  {cat.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div>
@@ -268,7 +258,7 @@ export function EventModal({
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
+            className={`${fieldClass} resize-none`}
             placeholder="선택 사항"
           />
         </div>

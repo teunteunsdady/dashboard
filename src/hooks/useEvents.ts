@@ -88,17 +88,26 @@ export function useEvents() {
 
   const addEvent = useCallback(
     async (event: Omit<CalendarEvent, 'id'>) => {
-      const newEvent: CalendarEvent = { ...event, id: generateEventId() }
-      setEvents((prev) => [...prev, newEvent])
-
       if (useCloud && user) {
+        const optimisticId = generateEventId()
+        const optimisticEvent: CalendarEvent = { ...event, id: optimisticId }
+        setEvents((prev) => [...prev, optimisticEvent])
+
         try {
-          await supabaseEvents.createEvent(newEvent, user.id)
+          const saved = await supabaseEvents.createEvent(event, user.id)
+          setEvents((prev) =>
+            prev.map((e) => (e.id === optimisticId ? saved : e)),
+          )
+          return saved
         } catch (err) {
-          setEvents((prev) => prev.filter((e) => e.id !== newEvent.id))
+          setEvents((prev) => prev.filter((e) => e.id !== optimisticId))
           setError(err instanceof Error ? err.message : '일정 추가 실패')
+          throw err
         }
       }
+
+      const newEvent: CalendarEvent = { ...event, id: generateEventId() }
+      setEvents((prev) => [...prev, newEvent])
       return newEvent
     },
     [useCloud, user],

@@ -1,6 +1,17 @@
 import type { EventInput } from '@fullcalendar/core'
 import type { CalendarEvent, EventCategoryMeta } from '../types/calendar'
 
+/** 활성 칩 위 텍스트·동그라미 색 (모든 카테고리 흰색 통일) */
+export function getCategoryTextColor(_color: string): string {
+  return '#FFFFFF'
+}
+
+/** 활성 칩 앞 동그라미 색 — 배경과 대비되도록 텍스트 색과 통일 */
+export function getCategoryDotColor(color: string, active: boolean): string {
+  if (!active) return color
+  return getCategoryTextColor(color)
+}
+
 /** 종일 일정 여부 판별 */
 export function isAllDayEvent(event: Pick<CalendarEvent, 'start' | 'allDay'>): boolean {
   if (event.allDay !== undefined) return event.allDay
@@ -24,7 +35,7 @@ export function toFullCalendarEvent(
     allDay,
     backgroundColor: color,
     borderColor: color,
-    textColor: '#ffffff',
+    textColor: getCategoryTextColor(color),
     extendedProps: {
       category: event.category,
       description: event.description ?? '',

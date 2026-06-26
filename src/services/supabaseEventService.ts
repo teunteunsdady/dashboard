@@ -6,35 +6,51 @@ interface EventRow {
   id: string
   user_id: string
   title: string
-  start_date: string
-  end_date: string | null
+  starts_at: string
+  ends_at: string | null
   category: string
   description: string | null
   all_day: boolean
 }
 
+function formatEventDate(iso: string, allDay: boolean): string {
+  if (allDay) return iso.slice(0, 10)
+  const date = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function parseEventDate(value: string, allDay: boolean): string {
+  if (allDay) return `${value.slice(0, 10)}T00:00:00.000Z`
+  return new Date(value).toISOString()
+}
+
 function rowToEvent(row: EventRow): CalendarEvent {
+  const allDay = row.all_day
   return {
     id: row.id,
     title: row.title,
-    start: row.start_date,
-    end: row.end_date ?? undefined,
+    start: formatEventDate(row.starts_at, allDay),
+    end: row.ends_at ? formatEventDate(row.ends_at, allDay) : undefined,
     category: row.category as CalendarEvent['category'],
     description: row.description ?? undefined,
-    allDay: row.all_day,
+    allDay,
   }
 }
 
-function eventToRow(event: CalendarEvent, userId: string): EventRow {
+function eventToInsertRow(
+  event: Omit<CalendarEvent, 'id'> | CalendarEvent,
+  userId: string,
+): Omit<EventRow, 'id'> {
+  const allDay = event.allDay ?? !event.start.includes('T')
   return {
-    id: event.id,
     user_id: userId,
     title: event.title,
-    start_date: event.start,
-    end_date: event.end ?? null,
+    starts_at: parseEventDate(event.start, allDay),
+    ends_at: event.end ? parseEventDate(event.end, allDay) : null,
     category: event.category,
     description: event.description ?? null,
-    all_day: event.allDay ?? !event.start.includes('T'),
+    all_day: allDay,
   }
 }
 
@@ -46,21 +62,29 @@ export async function fetchEvents(userId: string): Promise<CalendarEvent[]> {
     .from('events')
     .select('*')
     .eq('user_id', userId)
-    .order('start_date', { ascending: true })
+    .order('starts_at', { ascending: true })
 
   if (error) throw error
   return (data as EventRow[]).map(rowToEvent)
 }
 
-/** Supabase에 일정 생성 */
+/** Supabase에 일정 생성 (DB가 id 발급) */
 export async function createEvent(
-  event: CalendarEvent,
+  event: Omit<CalendarEvent, 'id'>,
   userId: string,
-): Promise<void> {
-  if (!supabase) return
+): Promise<CalendarEvent> {
+  if (!supabase) {
+    throw new Error('Supabase가 설정되지 않았습니다.')
+  }
 
-  const { error } = await supabase.from('events').insert(eventToRow(event, userId))
+  const { data, error } = await supabase
+    .from('events')
+    .insert(eventToInsertRow(event, userId))
+    .select('*')
+    .single()
+
   if (error) throw error
+  return rowToEvent(data as EventRow)
 }
 
 /** Supabase 일정 수정 */
@@ -72,7 +96,7 @@ export async function updateEvent(
 
   const { error } = await supabase
     .from('events')
-    .update(eventToRow(event, userId))
+    .update(eventToInsertRow(event, userId))
     .eq('id', event.id)
     .eq('user_id', userId)
 
@@ -111,7 +135,7 @@ export async function importEvents(
 ): Promise<void> {
   if (!supabase || events.length === 0) return
 
-  const rows = events.map((e) => eventToRow(e, userId))
-  const { error } = await supabase.from('events').upsert(rows)
+  const rows = events.map((event) => eventToInsertRow(event, userId))
+  const { error } = await supabase.from('events').insert(rows)
   if (error) throw error
 }
