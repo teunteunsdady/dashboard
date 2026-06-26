@@ -101,8 +101,10 @@ export function useEvents() {
           return saved
         } catch (err) {
           setEvents((prev) => prev.filter((e) => e.id !== optimisticId))
-          setError(err instanceof Error ? err.message : '일정 추가 실패')
-          throw err
+          const message =
+            err instanceof Error ? err.message : '일정 추가 실패'
+          setError(message)
+          throw err instanceof Error ? err : new Error(message)
         }
       }
 
@@ -123,7 +125,10 @@ export function useEvents() {
           await supabaseEvents.updateEvent(updated, user.id)
         } catch (err) {
           setEvents(prev)
-          setError(err instanceof Error ? err.message : '일정 수정 실패')
+          const message =
+            err instanceof Error ? err.message : '일정 수정 실패'
+          setError(message)
+          throw err instanceof Error ? err : new Error(message)
         }
       }
     },

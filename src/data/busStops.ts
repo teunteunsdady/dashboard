@@ -50,10 +50,14 @@ export function getBusStopOption(id: string) {
   return busStopOptions.find((stop) => stop.id === id)
 }
 
-export function stopOptionLabel(option: BusStopOption) {
-  return `${option.routeNumber} - ${option.name}`
+export function formatStopDisplayName(name: string): string {
+  return name.replace(/\s+/g, '')
 }
 
-export function stopDirectionLabel(option: BusStopOption) {
-  return `${option.name} (${option.travelDirection} 방향)`
+export function stopDisplayName(option: BusStopOption) {
+  return formatStopDisplayName(option.name)
+}
+
+export function stopOptionLabel(option: BusStopOption) {
+  return `${option.routeNumber} - ${stopDisplayName(option)}`
 }

@@ -17,6 +17,82 @@ import { Card } from '../ui/Card'
 
 type CalendarViewType = 'dayGridMonth' | 'timeGridWeek'
 
+export type { CalendarViewType }
+
+interface CalendarToolbarProps {
+  currentView: CalendarViewType
+  onViewChange: (view: CalendarViewType) => void
+  onAddClick: () => void
+}
+
+/** 월간/주간 전환 + 일정 추가 */
+export function CalendarToolbar({
+  currentView,
+  onViewChange,
+  onAddClick,
+}: CalendarToolbarProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex rounded-xl border border-border bg-surface p-1">
+        <button
+          type="button"
+          onClick={() => onViewChange('dayGridMonth')}
+          className={[
+            'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+            currentView === 'dayGridMonth'
+              ? 'bg-main text-white'
+              : 'text-text-secondary hover:text-main',
+          ].join(' ')}
+        >
+          월간
+        </button>
+        <button
+          type="button"
+          onClick={() => onViewChange('timeGridWeek')}
+          className={[
+            'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+            currentView === 'timeGridWeek'
+              ? 'bg-main text-white'
+              : 'text-text-secondary hover:text-main',
+          ].join(' ')}
+        >
+          주간
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onAddClick}
+        className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-main-dark"
+      >
+        + 일정 추가
+      </button>
+    </div>
+  )
+}
+
+function CalendarHelpHint() {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-border/70 text-sm font-bold text-text-secondary transition-colors hover:border-main/25 hover:bg-main/5 hover:text-main"
+        aria-describedby="calendar-help-tooltip"
+        aria-label="달력 사용 안내"
+      >
+        !
+      </button>
+      <div
+        id="calendar-help-tooltip"
+        role="tooltip"
+        className="pointer-events-none absolute right-0 bottom-full z-20 mb-2 w-56 rounded-xl border border-border/60 bg-surface-card px-3 py-2.5 text-xs leading-relaxed text-text-secondary opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        일정을 드래그하면 날짜와 시간을 옮길 수 있어요. 주간 뷰에서는
+        시간대별 일정을 확인할 수 있습니다.
+      </div>
+    </div>
+  )
+}
+
 interface TooltipState {
   visible: boolean
   title: string
@@ -38,6 +114,9 @@ interface CalendarViewProps {
   onDateClick: (start: string, allDay: boolean) => void
   onEventMove: (id: string, startStr: string, endStr?: string | null) => void
   onAddClick: () => void
+  currentView: CalendarViewType
+  onViewChange: (view: CalendarViewType) => void
+  showToolbar?: boolean
 }
 
 /** FullCalendar 기반 월간/주간 뷰 + 카테고리 필터 + 드래그 이동 */
@@ -50,15 +129,17 @@ export function CalendarView({
   onDateClick,
   onEventMove,
   onAddClick,
+  currentView,
+  onViewChange,
+  showToolbar = true,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
-  const [currentView, setCurrentView] = useState<CalendarViewType>('dayGridMonth')
   const [isMobile, setIsMobile] = useState(false)
   const [tooltip, setTooltip] = useState<TooltipState>({
     visible: false,
     title: '',
     categoryLabel: '',
-    categoryColor: '#007AFF',
+    categoryColor: '#BFDBFE',
     dateText: '',
     x: 0,
     y: 0,
@@ -76,9 +157,14 @@ export function CalendarView({
     [events, categories],
   )
 
+  useEffect(() => {
+    const api = calendarRef.current?.getApi()
+    api?.changeView(currentView)
+    requestAnimationFrame(() => api?.updateSize())
+  }, [currentView])
+
   const switchView = (view: CalendarViewType) => {
-    setCurrentView(view)
-    calendarRef.current?.getApi().changeView(view)
+    onViewChange(view)
   }
 
   const handleEventClick = (info: EventClickArg) => {
@@ -134,7 +220,7 @@ export function CalendarView({
       ({
         id: 'personal',
         label: '기타',
-        color: '#007AFF',
+        color: '#BFDBFE',
       } as EventCategoryMeta)
     const categoryLabel = categoryMeta.label
     const isAllDay = Boolean(info.event.allDay)
@@ -221,56 +307,28 @@ export function CalendarView({
 
   return (
     <Card className="border-main/10">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm text-text-secondary">
-            드래그로 일정을 이동하고, 주간 뷰에서 시간대별 일정을 확인하세요.
-          </p>
+      {showToolbar && (
+        <div className="mb-6 flex justify-end">
+          <CalendarToolbar
+            currentView={currentView}
+            onViewChange={switchView}
+            onAddClick={onAddClick}
+          />
         </div>
+      )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl border border-border bg-surface p-1">
-            <button
-              type="button"
-              onClick={() => switchView('dayGridMonth')}
-              className={[
-                'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                currentView === 'dayGridMonth'
-                  ? 'bg-main text-white'
-                  : 'text-text-secondary hover:text-main',
-              ].join(' ')}
-            >
-              월간
-            </button>
-            <button
-              type="button"
-              onClick={() => switchView('timeGridWeek')}
-              className={[
-                'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                currentView === 'timeGridWeek'
-                  ? 'bg-main text-white'
-                  : 'text-text-secondary hover:text-main',
-              ].join(' ')}
-            >
-              주간
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={onAddClick}
-            className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-main-dark"
-          >
-            + 일정 추가
-          </button>
-        </div>
-      </div>
-
-      <div className="mb-6">
+      <div
+        className={[
+          'flex flex-wrap items-center justify-between gap-3',
+          showToolbar ? 'mb-6' : 'mb-4',
+        ].join(' ')}
+      >
         <CategoryFilter
           categories={categories}
           activeFilters={activeFilters}
           onToggle={onToggleFilter}
         />
+        <CalendarHelpHint />
       </div>
 
       <div className="calendar-wrapper rounded-xl border border-main/15 bg-surface p-2 shadow-inner md:p-4">
@@ -280,9 +338,15 @@ export function CalendarView({
           initialView="dayGridMonth"
           locale={koLocale}
           headerToolbar={{
-            left: isMobile ? 'prev,next' : 'prev,next today',
+            left: 'prev',
             center: 'title',
-            right: '',
+            right: 'next',
+          }}
+          dayCellContent={(arg) => {
+            if (arg.view.type === 'dayGridMonth') {
+              return String(arg.date.getDate())
+            }
+            return undefined
           }}
           events={fcEvents}
           eventClick={handleEventClick}
@@ -291,7 +355,13 @@ export function CalendarView({
           dateClick={handleDateClick}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
+          timeZone="local"
           height="auto"
+          views={{
+            timeGridWeek: {
+              dayHeaderFormat: { weekday: 'short', month: 'numeric', day: 'numeric' },
+            },
+          }}
           dayMaxEvents={isMobile ? 2 : 3}
           fixedWeekCount={false}
           weekends
@@ -302,8 +372,8 @@ export function CalendarView({
           slotDuration="00:30:00"
           slotLabelInterval="01:00:00"
           snapDuration="00:15:00"
-          eventMinHeight={14}
-          eventShortHeight={20}
+          eventDisplay="block"
+          eventMinHeight={18}
           slotMinTime="07:00:00"
           slotMaxTime="22:00:00"
           allDaySlot

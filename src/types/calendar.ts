@@ -2,6 +2,7 @@
 
 export type EventCategory =
   | 'personal'
+  | 'company'
   | 'finance'
   | 'subscription'
   | 'career'

@@ -77,6 +77,30 @@
   @apply text-lg font-semibold text-text-primary;
 }
 
+.calendar-wrapper .fc .fc-toolbar {
+  @apply gap-2;
+}
+
+.calendar-wrapper .fc .fc-toolbar-chunk {
+  display: flex;
+  align-items: center;
+}
+
+.calendar-wrapper .fc .fc-toolbar-chunk:first-child {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.calendar-wrapper .fc .fc-toolbar-chunk:nth-child(2) {
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.calendar-wrapper .fc .fc-toolbar-chunk:last-child {
+  flex: 1;
+  justify-content: flex-end;
+}
+
 .calendar-wrapper .fc .fc-col-header-cell-cushion,
 .calendar-wrapper .fc .fc-daygrid-day-number {
   @apply text-sm text-text-secondary;
@@ -150,14 +174,26 @@
   overflow: visible !important;
 }
 
-/* 해결 2: Calendar 경계를 넘어도 툴팁이 보이도록 허용 */
-.calendar-wrapper,
-.calendar-wrapper .fc,
-.calendar-wrapper .fc .fc-view-harness,
-.calendar-wrapper .fc .fc-scroller,
-.calendar-wrapper .fc .fc-daygrid-body,
-.calendar-wrapper .fc .fc-daygrid-body-natural {
+/* 월간 뷰: 툴팁이 잘리지 않도록 (주간 timegrid scroller는 제외) */
+.calendar-wrapper .fc-dayGridMonth-view .fc-daygrid-body,
+.calendar-wrapper .fc-dayGridMonth-view .fc-daygrid-body-natural {
   overflow: visible !important;
+}
+
+/* 주간 뷰 이벤트가 슬롯 비율대로 늘어나도록 */
+.calendar-wrapper .fc-timegrid-col-events {
+  position: relative;
+}
+
+.calendar-wrapper .fc .fc-timegrid-event-harness {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.calendar-wrapper .fc .fc-timegrid-event {
+  min-height: 0 !important;
+  height: 100%;
 }
 
 /* 일정별 textColor 속성 사용 (밝은 노란색 등은 어두운 텍스트) */
@@ -168,15 +204,6 @@
 /* 월간 점형 이벤트는 어두운 텍스트로 가독성 확보 */
 .calendar-wrapper .fc .fc-daygrid-dot-event {
   color: #334155 !important;
-}
-
-/* 주간 뷰 시간 슬롯/이벤트 높이 보정 */
-.calendar-wrapper .fc .fc-timegrid-slot {
-  height: 1.75rem;
-}
-
-.calendar-wrapper .fc .fc-timegrid-event {
-  min-height: 0 !important;
 }
 
 /* 커스텀 Date/Time picker 스크롤바 */

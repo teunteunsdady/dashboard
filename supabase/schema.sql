@@ -135,7 +135,7 @@ create table public.events (
   starts_at timestamptz not null,
   ends_at timestamptz,
   category text not null check (
-    category in ('personal', 'finance', 'subscription', 'career', 'family', 'church')
+    category in ('personal', 'company', 'finance', 'subscription', 'career', 'family', 'church')
   ),
   description text,
   all_day boolean not null default true,

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BusStopPicker } from '../components/bus/BusStopPicker'
-import { DEFAULT_BUS_STOP_ID, routeColors } from '../data/busStops'
+import { DEFAULT_BUS_STOP_ID, formatStopDisplayName, routeColors } from '../data/busStops'
 import { useBusArrivals } from '../hooks/useBusArrivals'
 import type { BusArrivalItem } from '../services/busService'
 
@@ -56,7 +56,7 @@ function StopDetail({ stop }: { stop: BusArrivalItem }) {
         </div>
 
         <h2 className="mt-4 text-2xl font-bold leading-snug text-text-primary">
-          {stop.stopName} ({stop.travelDirection} 방향)
+          {formatStopDisplayName(stop.stopName)}
         </h2>
         <p className="mt-1 text-sm text-text-secondary">ARS {stop.arsId}</p>
 
@@ -158,8 +158,17 @@ export function BusPage() {
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-5">
             <p className="text-sm font-semibold text-red-600">{error}</p>
             <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-              `.env` / Vercel에 `SEOUL_BUS_API_KEY`를 등록한 뒤 다시
-              시도해 주세요.
+              {error.includes('SEOUL_BUS_API_KEY') ? (
+                <>
+                  배포 사이트(Vercel)에서는 프로젝트 Settings → Environment
+                  Variables에 <code className="text-xs">SEOUL_BUS_API_KEY</code>
+                  를 등록한 뒤 재배포해 주세요. 로컬에서는{' '}
+                  <code className="text-xs">.env</code>에 키를 넣고 개발 서버를
+                  다시 시작하면 됩니다.
+                </>
+              ) : (
+                '잠시 후 새로고침해 보세요.'
+              )}
             </p>
           </div>
         ) : (

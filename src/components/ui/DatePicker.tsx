@@ -1,17 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { FieldLabelWithHint } from './FieldLabelWithHint'
+import { parseDateInput } from '../../utils/calendarUtils'
 
 interface DatePickerProps {
   label: string
+  name?: string
   value: string
   onChange: (value: string) => void
   required?: boolean
   placeholder?: string
+  hint?: string
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const
 
 const SUNDAY_COLOR = '#EF4444'
 const SATURDAY_COLOR = '#3B82F6'
+
+const fieldClass =
+  'min-w-0 flex-1 rounded-xl border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-main focus:ring-2 focus:ring-main/20'
 
 function getWeekdayColor(dayIndex: number) {
   if (dayIndex === 0) return SUNDAY_COLOR
@@ -34,12 +41,6 @@ function toDateString(year: number, month: number, day: number) {
 function parseDate(value: string) {
   const [year, month, day] = value.split('-').map(Number)
   return { year, month, day }
-}
-
-function formatDisplay(value: string) {
-  if (!value) return ''
-  const { year, month, day } = parseDate(value)
-  return `${year}년 ${month}월 ${day}일`
 }
 
 function buildMonthGrid(year: number, month: number) {
@@ -87,21 +88,30 @@ function buildMonthGrid(year: number, month: number) {
   return cells
 }
 
-/** 홈페이지 디자인에 맞춘 커스텀 날짜 선택기 */
+/** 커스텀 날짜 선택기 — 직접 입력 + 달력 */
 export function DatePicker({
   label,
+  name,
   value,
   onChange,
-  required,
-  placeholder = '날짜 선택',
+  placeholder = '2026-06-26',
+  hint = '2026-06-26 형식으로 직접 입력하거나 달력에서 선택할 수 있어요.',
 }: DatePickerProps) {
+  const inputId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const [focused, setFocused] = useState(false)
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
   const initial = value ? parseDate(value) : parseDate(today)
   const [viewYear, setViewYear] = useState(initial.year)
   const [viewMonth, setViewMonth] = useState(initial.month)
+
+  useEffect(() => {
+    if (focused) return
+    setDraft(value)
+  }, [value, focused])
 
   useEffect(() => {
     if (!value) return
@@ -134,30 +144,69 @@ export function DatePicker({
     setViewMonth(date.getMonth() + 1)
   }
 
+  const commitDraft = () => {
+    setFocused(false)
+    const parsed = parseDateInput(draft)
+    if (parsed === null) {
+      setDraft(value)
+      return
+    }
+    onChange(parsed)
+    setDraft(parsed)
+  }
+
+  const handleDraftChange = (next: string) => {
+    setDraft(next)
+    const parsed = parseDateInput(next)
+    if (parsed !== null && parsed !== '') {
+      onChange(parsed)
+    }
+  }
+
   return (
     <div ref={rootRef} className="relative">
-      <label className="mb-1.5 block text-sm font-medium text-text-primary">
-        {label}
-      </label>
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className={[
-          'flex w-full items-center justify-between rounded-xl border bg-surface px-3 py-2 text-sm outline-none transition-colors',
-          open
-            ? 'border-main ring-2 ring-main/20'
-            : 'border-border hover:border-main/40',
-        ].join(' ')}
-      >
-        <span className={value ? 'text-text-primary' : 'text-text-secondary'}>
-          {value ? formatDisplay(value) : placeholder}
-        </span>
-        <CalendarIcon />
-      </button>
-      <input type="hidden" value={value} required={required} readOnly />
+      <FieldLabelWithHint label={label} hint={hint} htmlFor={inputId} />
+      <div className="flex gap-2">
+        <input
+          id={inputId}
+          name={name}
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          placeholder={placeholder}
+          onChange={(event) => handleDraftChange(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={commitDraft}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              commitDraft()
+            }
+          }}
+          className={[
+            fieldClass,
+            open ? 'border-main ring-2 ring-main/20' : 'border-border',
+          ].join(' ')}
+          aria-label={label}
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          className={[
+            'flex shrink-0 items-center justify-center rounded-xl border bg-surface px-3 py-2 transition-colors',
+            open
+              ? 'border-main text-main ring-2 ring-main/20'
+              : 'border-border text-main hover:border-main/40',
+          ].join(' ')}
+          aria-label="달력 열기"
+          aria-expanded={open}
+        >
+          <CalendarIcon />
+        </button>
+      </div>
 
       {open && (
-        <div className="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-border bg-surface-card p-4 shadow-card-hover">
+        <div className="absolute left-0 right-0 z-20 mt-1 rounded-2xl border border-border bg-surface-card p-4 shadow-card-hover">
           <div className="mb-3 flex items-center justify-between">
             <button
               type="button"
@@ -209,6 +258,7 @@ export function DatePicker({
                   type="button"
                   onClick={() => {
                     onChange(cell.date)
+                    setDraft(cell.date)
                     setOpen(false)
                   }}
                   className={[
@@ -240,6 +290,7 @@ export function DatePicker({
               type="button"
               onClick={() => {
                 onChange(today)
+                setDraft(today)
                 setOpen(false)
               }}
               className="rounded-lg px-3 py-1.5 text-xs font-medium text-main hover:bg-main/10"
@@ -256,7 +307,7 @@ export function DatePicker({
 function CalendarIcon() {
   return (
     <svg
-      className="h-4 w-4 text-main"
+      className="h-4 w-4"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

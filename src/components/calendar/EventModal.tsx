@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react'
 import type { CalendarEvent, EventCategory, EventCategoryMeta } from '../../types/calendar'
+import { eventDebugLog } from '../../utils/eventDebugLog'
 import {
   buildEventDateTime,
+  formatEventFormSnapshot,
   getCategoryDotColor,
-  getCategoryTextColor,
   isAllDayEvent,
-  toDatetimeLocal,
+  localToday,
+  normalizeTimedForm,
+  readEventFormRawInputs,
+  resolveTimedEventEnd,
+  splitLocalDateTime,
+  syncEventFormFromDom,
+  validateEventForm,
 } from '../../utils/calendarUtils'
 import { DatePicker } from '../ui/DatePicker'
 import { Modal } from '../ui/Modal'
 import { TimePicker } from '../ui/TimePicker'
+import { Toggle } from '../ui/Toggle'
 
 export type EventModalMode = 'create' | 'edit'
 
@@ -19,7 +27,7 @@ interface EventModalProps {
   event: CalendarEvent | null
   categories: EventCategoryMeta[]
   onClose: () => void
-  onSave: (event: CalendarEvent) => void
+  onSave: (event: CalendarEvent) => Promise<void>
   onDelete?: (id: string) => void
 }
 
@@ -34,20 +42,17 @@ interface EventForm {
   description: string
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
-
 const emptyForm = (defaultStart?: string): EventForm => {
   const isTimed = defaultStart?.includes('T')
-  const startDate = defaultStart?.slice(0, 10) ?? today()
-  const startTime = isTimed
-    ? toDatetimeLocal(defaultStart!).slice(11, 16)
-    : '09:00'
+  const { date: startDate, time: startTime } = defaultStart
+    ? splitLocalDateTime(defaultStart)
+    : { date: localToday(), time: '09:00' }
 
   return {
     title: '',
     allDay: !isTimed,
     startDate,
-    startTime,
+    startTime: isTimed ? startTime : '09:00',
     endDate: '',
     endTime: '',
     category: 'personal',
@@ -69,23 +74,29 @@ export function EventModal({
   onDelete,
 }: EventModalProps) {
   const [form, setForm] = useState<EventForm>(emptyForm())
+  const [formError, setFormError] = useState<{
+    message: string
+    snapshot?: string
+  } | null>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
+    setFormError(null)
+    setSaving(false)
 
     if (mode === 'edit' && event) {
       const allDay = isAllDayEvent(event)
+      const startParts = splitLocalDateTime(event.start)
+      const endParts = event.end ? splitLocalDateTime(event.end) : null
+
       setForm({
         title: event.title,
         allDay,
-        startDate: event.start.slice(0, 10),
-        startTime: allDay ? '09:00' : toDatetimeLocal(event.start).slice(11, 16),
-        endDate: event.end?.slice(0, 10) ?? '',
-        endTime: allDay
-          ? ''
-          : event.end
-            ? toDatetimeLocal(event.end).slice(11, 16)
-            : '',
+        startDate: startParts.date,
+        startTime: allDay ? '09:00' : startParts.time,
+        endDate: endParts?.date ?? '',
+        endTime: allDay ? '' : (endParts?.time ?? ''),
         category: event.category,
         description: event.description ?? '',
       })
@@ -94,34 +105,80 @@ export function EventModal({
     }
   }, [isOpen, mode, event])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!form.title.trim()) return
+    if (saving) return
+
+    const rawInputs = readEventFormRawInputs(e.currentTarget)
+    eventDebugLog('EventModal: submit raw DOM', rawInputs)
+
+    const syncedForm = syncEventFormFromDom(form, e.currentTarget)
+    const normalizedForm = syncedForm.allDay
+      ? syncedForm
+      : normalizeTimedForm(syncedForm)
+    setForm(normalizedForm)
+    eventDebugLog('EventModal: submit normalized form', normalizedForm)
+
+    const validation = validateEventForm(
+      {
+        ...normalizedForm,
+        title: normalizedForm.title,
+      },
+      rawInputs,
+    )
+    if (validation.error) {
+      eventDebugLog('EventModal: 클라이언트 검증 실패', validation)
+      setFormError({
+        message: validation.error,
+        snapshot: validation.snapshot,
+      })
+      return
+    }
 
     const start = buildEventDateTime(
-      form.startDate,
-      form.startTime,
-      form.allDay,
+      normalizedForm.startDate,
+      normalizedForm.startTime,
+      normalizedForm.allDay,
     )
 
     let end: string | undefined
-    if (form.allDay) {
-      end = form.endDate || undefined
-    } else if (form.endDate && form.endTime) {
-      end = buildEventDateTime(form.endDate, form.endTime, false)
+    if (normalizedForm.allDay) {
+      end = normalizedForm.endDate || undefined
+    } else {
+      end = resolveTimedEventEnd(normalizedForm)
     }
 
     const payload: CalendarEvent = {
       id: mode === 'edit' && event ? event.id : '',
-      title: form.title.trim(),
+      title: normalizedForm.title.trim(),
       start,
       end,
-      category: form.category,
-      description: form.description.trim() || undefined,
-      allDay: form.allDay,
+      category: normalizedForm.category,
+      description: normalizedForm.description.trim() || undefined,
+      allDay: normalizedForm.allDay,
     }
-    onSave(payload)
-    onClose()
+
+    eventDebugLog('EventModal: Supabase 저장 payload', payload)
+
+    setSaving(true)
+    setFormError(null)
+    try {
+      await onSave(payload)
+      onClose()
+    } catch (err) {
+      eventDebugLog('EventModal: 저장 catch', {
+        message: err instanceof Error ? err.message : err,
+        payload,
+      })
+      const message =
+        err instanceof Error ? err.message : '일정을 저장하지 못했습니다.'
+      setFormError({
+        message,
+        snapshot: formatEventFormSnapshot(normalizedForm, rawInputs),
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDelete = () => {
@@ -137,14 +194,23 @@ export function EventModal({
       onClose={onClose}
       title={mode === 'create' ? '일정 추가' : '일정 수정'}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {formError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600">
+            <p className="font-medium">{formError.message}</p>
+            {formError.snapshot && (
+              <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-red-100/60 px-2.5 py-2 font-mono text-xs leading-relaxed text-red-700">
+                {formError.snapshot}
+              </pre>
+            )}
+          </div>
+        )}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-text-primary">
             제목
           </label>
           <input
             type="text"
-            required
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             className={fieldClass}
@@ -152,29 +218,49 @@ export function EventModal({
           />
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5">
-          <input
-            type="checkbox"
-            checked={form.allDay}
-            onChange={(e) => setForm({ ...form, allDay: e.target.checked })}
-            className="h-4 w-4 rounded border-border text-main focus:ring-main/20"
-          />
-          <span className="text-sm font-medium text-text-primary">종일 일정</span>
-        </label>
+        <Toggle
+          checked={form.allDay}
+          onChange={(allDay) => {
+            setForm((prev) => {
+              if (allDay) {
+                return { ...prev, allDay, endTime: '' }
+              }
+              return { ...prev, allDay, endDate: '', endTime: '' }
+            })
+          }}
+          label="종일 일정"
+          description={
+            form.allDay
+              ? '하루 종일 또는 기간으로 저장됩니다.'
+              : '시작·종료 시간을 지정합니다.'
+          }
+        />
 
         {form.allDay ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <DatePicker
               label="시작일"
+              name="startDate"
               value={form.startDate}
-              onChange={(startDate) => setForm({ ...form, startDate })}
+              onChange={(startDate) =>
+                setForm((prev) => ({
+                  ...prev,
+                  startDate,
+                  endDate:
+                    prev.endDate && prev.endDate < startDate
+                      ? startDate
+                      : prev.endDate,
+                }))
+              }
               required
             />
             <DatePicker
               label="종료일"
+              name="endDate"
               value={form.endDate}
               onChange={(endDate) => setForm({ ...form, endDate })}
               placeholder="선택 안 함"
+              hint="비우면 하루 일정으로 저장돼요. 종료일을 넣으면 기간 일정이 됩니다."
             />
           </div>
         ) : (
@@ -182,12 +268,23 @@ export function EventModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <DatePicker
                 label="시작일"
+                name="startDate"
                 value={form.startDate}
-                onChange={(startDate) => setForm({ ...form, startDate })}
+                onChange={(startDate) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    startDate,
+                    endDate:
+                      prev.endDate && prev.endDate < startDate
+                        ? startDate
+                        : prev.endDate,
+                  }))
+                }
                 required
               />
               <TimePicker
                 label="시작 시간"
+                name="startTime"
                 value={form.startTime}
                 onChange={(startTime) => setForm({ ...form, startTime })}
                 required
@@ -196,57 +293,70 @@ export function EventModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <DatePicker
                 label="종료일"
+                name="endDate"
                 value={form.endDate}
                 onChange={(endDate) => setForm({ ...form, endDate })}
                 placeholder="선택 안 함"
+                hint="비우면 시작일과 같은 날·종료 시간만 지정됩니다."
               />
               <TimePicker
                 label="종료 시간"
+                name="endTime"
                 value={form.endTime}
-                onChange={(endTime) => setForm({ ...form, endTime })}
-                placeholder="선택 안 함"
+                referenceStartTime={form.startTime}
+                allowEmpty
+                onChange={(endTime) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    endTime,
+                    endDate: endTime && !prev.endDate ? prev.startDate : prev.endDate,
+                  }))
+                }
+                placeholder="13:00"
+                hint="비우면 종료 시간 없이 저장돼요. 13:00 또는 1:00 입력 시 24시간 형식으로 저장됩니다."
               />
             </div>
           </>
         )}
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-text-primary">
+          <label
+            htmlFor="event-category"
+            className="mb-1.5 block text-sm font-medium text-text-primary"
+          >
             카테고리
           </label>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {categories.map((cat) => {
-              const selected = form.category === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setForm({ ...form, category: cat.id })}
-                  className={[
-                    'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all',
-                    selected
-                      ? 'border-transparent text-white shadow-sm'
-                      : 'border-border bg-surface text-text-secondary hover:border-main/30',
-                  ].join(' ')}
-                  style={
-                    selected
-                      ? {
-                          backgroundColor: cat.color,
-                          color: getCategoryTextColor(cat.color),
-                        }
-                      : undefined
-                  }
-                >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: getCategoryDotColor(cat.color, selected),
-                    }}
-                  />
+          <div className="relative">
+            <span
+              className="pointer-events-none absolute left-3 top-1/2 z-10 h-2.5 w-2.5 -translate-y-1/2 rounded-full"
+              style={{
+                backgroundColor: getCategoryDotColor(
+                  categories.find((c) => c.id === form.category)?.color ?? '#94A3B8',
+                  true,
+                ),
+              }}
+              aria-hidden
+            />
+            <select
+              id="event-category"
+              value={form.category}
+              onChange={(e) =>
+                setForm({ ...form, category: e.target.value as EventCategory })
+              }
+              className={`${fieldClass} appearance-none pl-8 pr-9`}
+            >
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
                   {cat.label}
-                </button>
-              )
-            })}
+                </option>
+              ))}
+            </select>
+            <span
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary"
+              aria-hidden
+            >
+              ▾
+            </span>
           </div>
         </div>
 
@@ -285,9 +395,10 @@ export function EventModal({
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white hover:bg-main-dark"
+              disabled={saving}
+              className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white hover:bg-main-dark disabled:opacity-50"
             >
-              {mode === 'create' ? '추가' : '저장'}
+              {saving ? '저장 중…' : mode === 'create' ? '추가' : '저장'}
             </button>
           </div>
         </div>

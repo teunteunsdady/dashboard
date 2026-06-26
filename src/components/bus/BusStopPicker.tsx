@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   busStopOptions,
-  stopDirectionLabel,
+  stopDisplayName,
   stopOptionLabel,
   type BusStopOption,
 } from '../../data/busStops'
@@ -65,7 +65,7 @@ export function BusStopPicker({ value, onChange }: BusStopPickerProps) {
             {selected.travelDirection} 방향
           </span>
           <span className="block truncate text-sm font-semibold text-text-primary">
-            {stopOptionLabel(selected)}
+            {stopDisplayName(selected)}
           </span>
         </span>
         <span
@@ -109,7 +109,7 @@ export function BusStopPicker({ value, onChange }: BusStopPickerProps) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-text-primary">
-                    {stopDirectionLabel(option)}
+                    {stopDisplayName(option)}
                   </span>
                   <span className="mt-0.5 block text-xs text-text-secondary">
                     {stopOptionLabel(option)}

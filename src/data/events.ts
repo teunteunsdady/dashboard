@@ -1,13 +1,14 @@
 import type { CalendarEvent, EventCategoryMeta } from '../types/calendar'
 
-/** 일정 카테고리 메타 정보 (색상·라벨) */
+/** 일정 카테고리 메타 정보 (색상·라벨) — 파스텔 배경 */
 export const eventCategories: EventCategoryMeta[] = [
-  { id: 'personal', label: '개인', color: '#FACC15' },
-  { id: 'finance', label: '금융', color: '#F97316' },
-  { id: 'subscription', label: '구독', color: '#A855F7' },
-  { id: 'career', label: '취업', color: '#EF4444' },
-  { id: 'family', label: '가족', color: '#22C55E' },
-  { id: 'church', label: '교회', color: '#3B82F6' },
+  { id: 'personal', label: '개인', color: '#A7F3D0' },
+  { id: 'company', label: '회사', color: '#E2E8F0' },
+  { id: 'finance', label: '금융', color: '#FDE68A' },
+  { id: 'subscription', label: '구독', color: '#DDD6FE' },
+  { id: 'career', label: '취업', color: '#FECDD3' },
+  { id: 'family', label: '가족', color: '#BBF7D0' },
+  { id: 'church', label: '교회', color: '#BFDBFE' },
 ]
 
 /** 캘린더 일정 Mock 데이터 (최초 로드 시 시드) */
