@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import webpush from "npm:web-push@3.6.7";
 
-const DISPATCH_WINDOW_MS = 5 * 60 * 1000;
 const NOTIFY_TZ = "Asia/Seoul";
 const ALL_DAY_NOTIFY_HOUR = 9;
 const NOTIFY_MINUTES_BEFORE = 10;
@@ -120,7 +119,6 @@ Deno.serve(async (req) => {
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const now = Date.now();
-  const windowStart = new Date(now - DISPATCH_WINDOW_MS);
 
   const { data: events, error: eventsError } = await admin
     .from("events")
@@ -136,8 +134,11 @@ Deno.serve(async (req) => {
   for (const event of (events ?? []) as EventRow[]) {
     const notifyAt = computeNotifyAt(event.starts_at, event.all_day);
     const notifyMs = notifyAt.getTime();
+    const startsMs = new Date(event.starts_at).getTime();
 
-    if (notifyMs > now || notifyMs < windowStart.getTime()) continue;
+    if (notifyMs > now) continue;
+    // 알림 시각~시작 전까지 보정 발송 (5분 cron 창을 놓쳐도 시작 시각에 가지 않음)
+    if (!event.all_day && now >= startsMs) continue;
 
     dueEvents.push({
       ...event,

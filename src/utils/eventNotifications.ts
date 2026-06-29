@@ -139,7 +139,6 @@ export function showEventNotification(event: CalendarEvent, notifyAt: Date): voi
   };
 }
 
-const DUE_WINDOW_MS = 5 * 60 * 1000;
 
 /** 놓친 알림 보정 (탭이 백그라운드였을 때) */
 export function fireDueNotifications(
@@ -151,11 +150,14 @@ export function fireDueNotifications(
 
   for (const event of events) {
     const at = getEventNotificationTime(event);
-    if (!at) continue;
+    const start = getEventStartTime(event);
+    if (!at || !start) continue;
 
     const atMs = at.getTime();
+    const startMs = start.getTime();
     if (atMs > now) continue;
-    if (now - atMs > DUE_WINDOW_MS) continue;
+    // 10분 전~시작 전 사이면 보정 (시작 시각에 알림 가지 않도록)
+    if (!isAllDayEvent(event) && now >= startMs) continue;
     if (wasEventNotified(event.id, atMs)) continue;
 
     showEventNotification(event, at);
