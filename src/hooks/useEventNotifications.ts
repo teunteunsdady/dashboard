@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { CalendarEvent } from '../types/calendar'
+import { useWebPush } from './useWebPush'
 import {
   fireDueNotifications,
   getEventNotificationTime,
@@ -12,8 +13,9 @@ import {
 const CHECK_INTERVAL_MS = 30_000
 const MAX_SCHEDULE_AHEAD_MS = 30 * 24 * 60 * 60 * 1000
 
-/** 일정 목록 기준 브라우저 알림 스케줄 (탭이 열려 있을 때) */
+/** 일정 목록 기준 브라우저 알림 스케줄 (탭이 열려 있을 때, Web Push 미사용 시) */
 export function useEventNotifications(events: CalendarEvent[]) {
+  const { isSubscribed } = useWebPush()
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
@@ -24,6 +26,7 @@ export function useEventNotifications(events: CalendarEvent[]) {
 
     const schedule = () => {
       clearTimers()
+      if (isSubscribed) return
       if (getNotificationPermission() !== 'granted') return
 
       const now = Date.now()
@@ -50,11 +53,15 @@ export function useEventNotifications(events: CalendarEvent[]) {
       }
     }
 
-    fireDueNotifications(events)
+    if (!isSubscribed) {
+      fireDueNotifications(events)
+    }
     schedule()
 
     const interval = window.setInterval(() => {
-      fireDueNotifications(events)
+      if (!isSubscribed) {
+        fireDueNotifications(events)
+      }
       schedule()
     }, CHECK_INTERVAL_MS)
 
@@ -62,5 +69,5 @@ export function useEventNotifications(events: CalendarEvent[]) {
       window.clearInterval(interval)
       clearTimers()
     }
-  }, [events])
+  }, [events, isSubscribed])
 }

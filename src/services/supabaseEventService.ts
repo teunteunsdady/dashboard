@@ -8,6 +8,14 @@ import {
 import { eventDebugLog } from '../utils/eventDebugLog'
 
 function toUserFacingError(error: { code?: string; message: string }): Error {
+  if (
+    error.message.includes('notify_enabled') ||
+    error.message.includes("'notify_enabled'")
+  ) {
+    return new Error(
+      '알림 설정 컬럼(notify_enabled)이 DB에 없습니다. Supabase SQL Editor에서 supabase/migrations/20260630_event_notify.sql 을 실행해 주세요.',
+    )
+  }
   if (error.code === '23514') {
     if (error.message.includes('events_category_check')) {
       eventDebugLog('Supabase DB 실패 [SUPABASE-23514 events_category_check]', {

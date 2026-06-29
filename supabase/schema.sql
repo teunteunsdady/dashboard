@@ -9,6 +9,8 @@
 -- -----------------------------------------------------------------------------
 drop trigger if exists on_auth_user_created on auth.users;
 
+drop table if exists public.event_push_dispatches cascade;
+drop table if exists public.push_subscriptions cascade;
 drop table if exists public.ledger_entries cascade;
 drop table if exists public.ledger_budgets cascade;
 drop table if exists public.ledger_recurring cascade;
@@ -17,6 +19,7 @@ drop table if exists public.projects cascade;
 drop table if exists public.skills cascade;
 drop table if exists public.profiles cascade;
 
+drop function if exists public.event_notify_at(timestamptz, boolean, text) cascade;
 drop function if exists public.set_updated_at() cascade;
 drop function if exists public.handle_new_user() cascade;
 
@@ -164,6 +167,63 @@ create policy "Users manage own events"
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- -----------------------------------------------------------------------------
+-- 5b. Web Push — 백그라운드 일정 알림
+-- -----------------------------------------------------------------------------
+create or replace function public.event_notify_at(
+  p_starts_at timestamptz,
+  p_all_day boolean,
+  p_tz text default 'Asia/Seoul'
+) returns timestamptz
+language sql
+stable
+as $$
+  select case
+    when p_all_day then
+      ((date_trunc('day', p_starts_at at time zone p_tz) + interval '9 hours') at time zone p_tz)
+    else
+      p_starts_at
+  end;
+$$;
+
+create table public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  endpoint text not null,
+  p256dh text not null,
+  auth_key text not null,
+  user_agent text,
+  created_at timestamptz not null default now(),
+  unique (user_id, endpoint)
+);
+
+create index push_subscriptions_user_id_idx on public.push_subscriptions (user_id);
+
+alter table public.push_subscriptions enable row level security;
+
+create policy "Users manage own push subscriptions"
+  on public.push_subscriptions for all
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create table public.event_push_dispatches (
+  event_id uuid not null references public.events (id) on delete cascade,
+  notify_at timestamptz not null,
+  sent_at timestamptz not null default now(),
+  primary key (event_id, notify_at)
+);
+
+create index event_push_dispatches_notify_at_idx on public.event_push_dispatches (notify_at);
+
+alter table public.event_push_dispatches enable row level security;
+
+create policy "No client access to push dispatches"
+  on public.event_push_dispatches for all
+  to authenticated
+  using (false)
+  with check (false);
 
 -- -----------------------------------------------------------------------------
 -- 6. ledger — Ledger (가계부)

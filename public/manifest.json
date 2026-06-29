@@ -1,0 +1,17 @@
+{
+  "name": "CyanOrbit.yol",
+  "short_name": "CyanOrbit",
+  "description": "개인 프로필, 포트폴리오, 일정 관리",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0E62F7",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
