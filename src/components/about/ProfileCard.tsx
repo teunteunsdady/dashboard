@@ -9,7 +9,7 @@ interface ProfileCardProps {
 /** 개인 프로필 카드 — Memoji 아바타, 이름, 직함, 연락처 */
 export function ProfileCard({ profile }: ProfileCardProps) {
   const hasBio = Boolean(profile.bio?.trim())
-  const hasContact = Boolean(profile.email || profile.github || profile.linkedin)
+  const hasContact = Boolean(profile.github || profile.linkedin)
 
   return (
     <Card className="relative overflow-hidden">
@@ -26,9 +26,19 @@ export function ProfileCard({ profile }: ProfileCardProps) {
           <p className="text-sm font-semibold uppercase tracking-wider text-sub">
             About Me
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-text-primary md:text-4xl">
-            {profile.name}
-          </h1>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <h1 className="text-3xl font-bold text-text-primary md:text-4xl">
+              {profile.name}
+            </h1>
+            {profile.email && (
+              <a
+                href={`mailto:${profile.email}`}
+                className="text-sm text-text-secondary transition-colors hover:text-main"
+              >
+                {profile.email}
+              </a>
+            )}
+          </div>
           <p className="mt-1 text-lg font-medium text-main">{profile.title}</p>
 
           {hasBio ? (
@@ -43,20 +53,12 @@ export function ProfileCard({ profile }: ProfileCardProps) {
 
           {hasContact && (
             <div className="mt-5 flex flex-wrap gap-3">
-              {profile.email && (
-                <a
-                  href={`mailto:${profile.email}`}
-                  className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-main-dark"
-                >
-                  Contact
-                </a>
-              )}
               {profile.github && (
                 <a
                   href={profile.github}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-main/30 hover:text-main"
+                  className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
                 >
                   GitHub
                 </a>

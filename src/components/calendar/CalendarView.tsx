@@ -32,32 +32,35 @@ export function CalendarToolbar({
   onAddClick,
 }: CalendarToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex rounded-xl border border-border bg-surface p-1">
-        <button
-          type="button"
-          onClick={() => onViewChange('dayGridMonth')}
-          className={[
-            'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-            currentView === 'dayGridMonth'
-              ? 'bg-main text-white'
-              : 'text-text-secondary hover:text-main',
-          ].join(' ')}
-        >
-          월간
-        </button>
-        <button
-          type="button"
-          onClick={() => onViewChange('timeGridWeek')}
-          className={[
-            'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-            currentView === 'timeGridWeek'
-              ? 'bg-main text-white'
-              : 'text-text-secondary hover:text-main',
-          ].join(' ')}
-        >
-          주간
-        </button>
+    <div className="flex shrink-0 flex-nowrap items-center gap-2">
+      <div className="flex items-center gap-1.5">
+        <CalendarHelpHint />
+        <div className="flex rounded-xl border border-border bg-surface p-1">
+          <button
+            type="button"
+            onClick={() => onViewChange('dayGridMonth')}
+            className={[
+              'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              currentView === 'dayGridMonth'
+                ? 'bg-main text-white'
+                : 'text-text-secondary hover:text-main',
+            ].join(' ')}
+          >
+            월간
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange('timeGridWeek')}
+            className={[
+              'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              currentView === 'timeGridWeek'
+                ? 'bg-main text-white'
+                : 'text-text-secondary hover:text-main',
+            ].join(' ')}
+          >
+            주간
+          </button>
+        </div>
       </div>
       <button
         type="button"
@@ -75,7 +78,7 @@ function CalendarHelpHint() {
     <div className="group relative">
       <button
         type="button"
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-border/70 text-sm font-bold text-text-secondary transition-colors hover:border-main/25 hover:bg-main/5 hover:text-main"
+        className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 text-[11px] font-bold leading-none text-text-secondary/80 transition-colors hover:border-main/20 hover:bg-main/5 hover:text-main"
         aria-describedby="calendar-help-tooltip"
         aria-label="달력 사용 안내"
       >
@@ -84,7 +87,7 @@ function CalendarHelpHint() {
       <div
         id="calendar-help-tooltip"
         role="tooltip"
-        className="pointer-events-none absolute right-0 bottom-full z-20 mb-2 w-56 rounded-xl border border-border/60 bg-surface-card px-3 py-2.5 text-xs leading-relaxed text-text-secondary opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="pointer-events-none absolute left-0 top-full z-20 mt-1.5 w-56 rounded-xl border border-border/60 bg-surface-card px-3 py-2.5 text-xs leading-relaxed text-text-secondary opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
       >
         일정을 드래그하면 날짜와 시간을 옮길 수 있어요. 주간 뷰에서는
         시간대별 일정을 확인할 수 있습니다.
@@ -116,7 +119,6 @@ interface CalendarViewProps {
   onAddClick: () => void
   currentView: CalendarViewType
   onViewChange: (view: CalendarViewType) => void
-  showToolbar?: boolean
 }
 
 /** FullCalendar 기반 월간/주간 뷰 + 카테고리 필터 + 드래그 이동 */
@@ -131,7 +133,6 @@ export function CalendarView({
   onAddClick,
   currentView,
   onViewChange,
-  showToolbar = true,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -162,10 +163,6 @@ export function CalendarView({
     api?.changeView(currentView)
     requestAnimationFrame(() => api?.updateSize())
   }, [currentView])
-
-  const switchView = (view: CalendarViewType) => {
-    onViewChange(view)
-  }
 
   const handleEventClick = (info: EventClickArg) => {
     const matched = events.find((e) => e.id === info.event.id)
@@ -307,28 +304,17 @@ export function CalendarView({
 
   return (
     <Card className="border-main/10">
-      {showToolbar && (
-        <div className="mb-6 flex justify-end">
-          <CalendarToolbar
-            currentView={currentView}
-            onViewChange={switchView}
-            onAddClick={onAddClick}
-          />
-        </div>
-      )}
-
-      <div
-        className={[
-          'flex flex-wrap items-center justify-between gap-3',
-          showToolbar ? 'mb-6' : 'mb-4',
-        ].join(' ')}
-      >
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CategoryFilter
           categories={categories}
           activeFilters={activeFilters}
           onToggle={onToggleFilter}
         />
-        <CalendarHelpHint />
+        <CalendarToolbar
+          currentView={currentView}
+          onViewChange={onViewChange}
+          onAddClick={onAddClick}
+        />
       </div>
 
       <div className="calendar-wrapper rounded-xl border border-main/15 bg-surface p-2 shadow-inner md:p-4">

@@ -3,7 +3,6 @@
 export type EventCategory =
   | 'personal'
   | 'company'
-  | 'finance'
   | 'subscription'
   | 'career'
   | 'family'
@@ -18,6 +17,8 @@ export interface CalendarEvent {
   category: EventCategory
   description?: string
   allDay?: boolean
+  /** 브라우저 알림 (시작 시각 / 종일은 당일 09:00) */
+  notify?: boolean
 }
 
 export interface EventCategoryMeta {

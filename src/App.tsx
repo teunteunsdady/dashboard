@@ -6,6 +6,7 @@ import { MainLayout } from './components/layout/MainLayout'
 import { AboutPage } from './pages/AboutPage'
 import { BusPage } from './pages/BusPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { LedgerPage } from './pages/LedgerPage'
 import { LoginPage } from './pages/LoginPage'
 
 /**
@@ -33,6 +34,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ledger"
+              element={
+                <ProtectedRoute>
+                  <LedgerPage />
                 </ProtectedRoute>
               }
             />

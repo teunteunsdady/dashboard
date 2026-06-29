@@ -1,28 +1,34 @@
 import { useEffect, useState } from 'react'
+import { CertificationsCard } from '../components/about/CertificationsCard'
+import { EducationCard } from '../components/about/EducationCard'
+import { CareerSection } from '../components/about/CareerSection'
+import { CoreCompetencies } from '../components/about/CoreCompetencies'
 import { ProfileCard } from '../components/about/ProfileCard'
 import { SkillBadges } from '../components/about/SkillBadges'
 import { ProjectCard } from '../components/about/ProjectCard'
 import { SectionTitle } from '../components/ui/SectionTitle'
-import { getProfile, getSkills, getProjects } from '../services/mockDataService'
+import {
+  certificationsData,
+  competenciesData,
+  educationData,
+} from '../data/aboutContent'
+import { personalProjects } from '../data/projects'
+import { getProfile, getSkills } from '../services/mockDataService'
 import type { Profile, Skill } from '../types/profile'
-import type { Project } from '../types/project'
 
-/** About 페이지 — 프로필, 기술 스택, 프로젝트 포트폴리오 */
+/** About 페이지 — 프로필, 역량·자격, 기술 스택, 프로젝트 */
 export function AboutPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [skills, setSkills] = useState<Skill[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
 
   useEffect(() => {
     async function loadData() {
-      const [profileRes, skillsRes, projectsRes] = await Promise.all([
+      const [profileRes, skillsRes] = await Promise.all([
         getProfile(),
         getSkills(),
-        getProjects(),
       ])
       setProfile(profileRes)
       setSkills(skillsRes)
-      setProjects(projectsRes)
     }
     loadData()
   }, [])
@@ -41,18 +47,31 @@ export function AboutPage() {
 
       <section className="space-y-6">
         <ProfileCard profile={profile} />
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <CoreCompetencies items={competenciesData} />
+          <div className="flex flex-col gap-6">
+            <CertificationsCard certifications={certificationsData} />
+            <EducationCard education={educationData} />
+          </div>
+        </div>
+
         <SkillBadges skills={skills} />
       </section>
 
-      <section id="projects" className="mt-16 scroll-mt-20">
-        <SectionTitle
-          title="Projects"
-          subtitle="진행했던 프로젝트와 포트폴리오"
-        />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
+      <section id="projects" className="mt-16 scroll-mt-20 space-y-12">
+        <CareerSection />
+
+        <div>
+          <SectionTitle
+            title="Side Projects"
+            subtitle="개인 프로젝트"
+          />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {personalProjects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
         </div>
       </section>
     </div>

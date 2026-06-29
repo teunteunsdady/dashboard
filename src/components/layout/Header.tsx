@@ -7,6 +7,7 @@ import { APP_NAME_PREFIX, APP_NAME_SUFFIX } from '../../constants/brand'
 const navItems = [
   { label: 'About', to: '/', end: true },
   { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Ledger', to: '/ledger' },
   { label: 'Bus', to: '/bus' },
 ]
 

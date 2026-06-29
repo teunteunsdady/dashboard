@@ -2,9 +2,8 @@ import type { CalendarEvent, EventCategoryMeta } from '../types/calendar'
 
 /** 일정 카테고리 메타 정보 (색상·라벨) — 파스텔 배경 */
 export const eventCategories: EventCategoryMeta[] = [
-  { id: 'personal', label: '개인', color: '#A7F3D0' },
+  { id: 'personal', label: '개인', color: '#FDE68A' },
   { id: 'company', label: '회사', color: '#E2E8F0' },
-  { id: 'finance', label: '금융', color: '#FDE68A' },
   { id: 'subscription', label: '구독', color: '#DDD6FE' },
   { id: 'career', label: '취업', color: '#FECDD3' },
   { id: 'family', label: '가족', color: '#BBF7D0' },
@@ -25,7 +24,7 @@ export const eventsData: CalendarEvent[] = [
     id: '2',
     title: '주식 배당금 입금',
     start: '2026-06-28',
-    category: 'finance',
+    category: 'personal',
     allDay: true,
   },
   {

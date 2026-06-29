@@ -4,7 +4,6 @@ import { eventDebugLog } from '../../utils/eventDebugLog'
 import {
   buildEventDateTime,
   formatEventFormSnapshot,
-  getCategoryDotColor,
   isAllDayEvent,
   localToday,
   normalizeTimedForm,
@@ -14,8 +13,13 @@ import {
   syncEventFormFromDom,
   validateEventForm,
 } from '../../utils/calendarUtils'
+import {
+  clearEventNotificationHistory,
+  requestNotificationPermission,
+} from '../../utils/eventNotifications'
 import { DatePicker } from '../ui/DatePicker'
 import { Modal } from '../ui/Modal'
+import { Select } from '../ui/Select'
 import { TimePicker } from '../ui/TimePicker'
 import { Toggle } from '../ui/Toggle'
 
@@ -40,6 +44,7 @@ interface EventForm {
   endTime: string
   category: EventCategory
   description: string
+  notify: boolean
 }
 
 const emptyForm = (defaultStart?: string): EventForm => {
@@ -57,6 +62,7 @@ const emptyForm = (defaultStart?: string): EventForm => {
     endTime: '',
     category: 'personal',
     description: '',
+    notify: false,
   }
 }
 
@@ -99,6 +105,7 @@ export function EventModal({
         endTime: allDay ? '' : (endParts?.time ?? ''),
         category: event.category,
         description: event.description ?? '',
+        notify: event.notify ?? false,
       })
     } else {
       setForm(emptyForm(event?.start))
@@ -156,6 +163,7 @@ export function EventModal({
       category: normalizedForm.category,
       description: normalizedForm.description.trim() || undefined,
       allDay: normalizedForm.allDay,
+      notify: normalizedForm.notify,
     }
 
     eventDebugLog('EventModal: Supabase 저장 payload', payload)
@@ -163,6 +171,9 @@ export function EventModal({
     setSaving(true)
     setFormError(null)
     try {
+      if (mode === 'edit' && event?.id) {
+        clearEventNotificationHistory(event.id)
+      }
       await onSave(payload)
       onClose()
     } catch (err) {
@@ -183,6 +194,7 @@ export function EventModal({
 
   const handleDelete = () => {
     if (mode === 'edit' && event && onDelete) {
+      clearEventNotificationHistory(event.id)
       onDelete(event.id)
       onClose()
     }
@@ -319,46 +331,35 @@ export function EventModal({
           </>
         )}
 
-        <div>
-          <label
-            htmlFor="event-category"
-            className="mb-1.5 block text-sm font-medium text-text-primary"
-          >
-            카테고리
-          </label>
-          <div className="relative">
-            <span
-              className="pointer-events-none absolute left-3 top-1/2 z-10 h-2.5 w-2.5 -translate-y-1/2 rounded-full"
-              style={{
-                backgroundColor: getCategoryDotColor(
-                  categories.find((c) => c.id === form.category)?.color ?? '#94A3B8',
-                  true,
-                ),
-              }}
-              aria-hidden
-            />
-            <select
-              id="event-category"
-              value={form.category}
-              onChange={(e) =>
-                setForm({ ...form, category: e.target.value as EventCategory })
-              }
-              className={`${fieldClass} appearance-none pl-8 pr-9`}
-            >
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-            <span
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary"
-              aria-hidden
-            >
-              ▾
-            </span>
-          </div>
-        </div>
+        <Select
+          label="카테고리"
+          id="event-category"
+          value={form.category}
+          onChange={(category) =>
+            setForm({ ...form, category: category as EventCategory })
+          }
+          options={categories.map((cat) => ({
+            value: cat.id,
+            label: cat.label,
+          }))}
+        />
+
+        <Toggle
+          checked={form.notify}
+          onChange={async (notify) => {
+            if (notify) {
+              const granted = await requestNotificationPermission()
+              if (!granted) return
+            }
+            setForm((prev) => ({ ...prev, notify }))
+          }}
+          label="브라우저 알림"
+          description={
+            form.allDay
+              ? '종일 일정은 당일 09:00에 알려드려요. Dashboard 탭이 열려 있어야 합니다.'
+              : '일정 시작 시간에 알려드려요. Dashboard 탭이 열려 있어야 합니다.'
+          }
+        />
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-text-primary">

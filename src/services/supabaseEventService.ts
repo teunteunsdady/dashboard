@@ -51,6 +51,7 @@ interface EventRow {
   category: string
   description: string | null
   all_day: boolean
+  notify_enabled: boolean
 }
 
 function formatEventDate(iso: string, allDay: boolean): string {
@@ -82,6 +83,7 @@ function rowToEvent(row: EventRow): CalendarEvent {
     category: row.category as CalendarEvent['category'],
     description: row.description ?? undefined,
     allDay,
+    notify: row.notify_enabled ?? false,
   }
 }
 
@@ -160,6 +162,7 @@ function eventToInsertRow(
     category: event.category,
     description: event.description ?? null,
     all_day: allDay,
+    notify_enabled: event.notify ?? false,
   }
 
   eventDebugLog('eventToInsertRow: 통과 — Supabase insert 예정', row)

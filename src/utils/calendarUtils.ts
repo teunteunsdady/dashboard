@@ -42,6 +42,26 @@ export function isAllDayEvent(event: Pick<CalendarEvent, 'start' | 'allDay'>): b
   return !event.start.includes('T')
 }
 
+/** 종료된 일정 여부 (로컬 기준) */
+export function isEventEnded(
+  event: Pick<CalendarEvent, 'start' | 'end' | 'allDay'>,
+  nowMs: number = Date.now(),
+): boolean {
+  const allDay = isAllDayEvent(event)
+
+  if (allDay) {
+    const lastDay = (event.end ?? event.start).slice(0, 10)
+    const today = localToday()
+    return today > lastDay
+  }
+
+  const endMs = event.end
+    ? toLocalDateTimeMs(normalizeDateTime(event.end))
+    : toLocalDateTimeMs(normalizeDateTime(event.start))
+
+  return nowMs > endMs
+}
+
 /** ISO/폼 문자열 → 로컬 YYYY-MM-DDTHH:mm (타임존 재해석 없이) */
 export function normalizeDateTime(value: string): string {
   if (!value.includes('T')) return value
@@ -82,6 +102,8 @@ export function toFullCalendarEvent(
   const color =
     categories.find((c) => c.id === event.category)?.color ?? '#BFDBFE'
   const allDay = isAllDayEvent(event)
+  const ended = isEventEnded(event)
+  const classNames = ended ? ['fc-event-ended'] : undefined
 
   if (allDay) {
     return {
@@ -90,6 +112,7 @@ export function toFullCalendarEvent(
       start: event.start.slice(0, 10),
       end: event.end?.slice(0, 10),
       allDay: true,
+      classNames,
       backgroundColor: color,
       borderColor: color,
       textColor: getCategoryTextColor(color),
@@ -116,6 +139,7 @@ export function toFullCalendarEvent(
     start,
     end,
     allDay: false,
+    classNames,
     backgroundColor: color,
     borderColor: color,
     textColor: getCategoryTextColor(color),

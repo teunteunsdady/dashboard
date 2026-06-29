@@ -132,6 +132,29 @@
   text-align: center;
 }
 
+/* 월간 뷰: 긴 제목 말줄임 (옆 칸 침범 방지) */
+.calendar-wrapper .fc-dayGridMonth-view .fc-daygrid-event-harness {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.calendar-wrapper .fc-dayGridMonth-view .fc-daygrid-event.fc-event {
+  overflow: hidden !important;
+  max-width: 100%;
+}
+
+.calendar-wrapper .fc-dayGridMonth-view .fc-daygrid-event .fc-event-main,
+.calendar-wrapper .fc-dayGridMonth-view .fc-daygrid-event .fc-event-main-frame {
+  overflow: hidden;
+  min-width: 0;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.calendar-wrapper .fc-dayGridMonth-view .fc-event-title {
+  text-align: left;
+}
+
 .calendar-wrapper .fc .fc-daygrid-event .fc-event-main,
 .calendar-wrapper .fc .fc-daygrid-event .fc-event-main-frame,
 .calendar-wrapper .fc .fc-timegrid-event .fc-event-main,
@@ -172,6 +195,22 @@
   border-width: 0 !important;
   position: relative;
   overflow: visible !important;
+}
+
+/* 종료된 일정 — 배경은 유지, 글씨만 연하게 */
+.calendar-wrapper .fc .fc-event.fc-event-ended {
+  opacity: 0.72;
+  box-shadow: none;
+}
+
+.calendar-wrapper .fc .fc-event.fc-event-ended .fc-event-title,
+.calendar-wrapper .fc .fc-event.fc-event-ended .fc-event-time {
+  opacity: 0.55;
+  font-weight: 500;
+}
+
+.calendar-wrapper .fc .fc-daygrid-dot-event.fc-event-ended {
+  opacity: 0.55;
 }
 
 /* 월간 뷰: 툴팁이 잘리지 않도록 (주간 timegrid scroller는 제외) */
@@ -223,5 +262,65 @@
 
 .picker-scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* 공통 셀렉트 (.ui-select) — Select 컴포넌트 또는 클래스 직접 사용 */
+@layer components {
+  .ui-select-wrap {
+    @apply relative;
+  }
+
+  .ui-select {
+    @apply relative flex w-full cursor-pointer items-center rounded-xl border border-border/60 bg-surface py-2 pl-3 pr-2.5 text-sm text-text-primary;
+    @apply outline-none transition-[border-color,box-shadow] duration-150;
+    @apply hover:border-border;
+    @apply focus-visible:border-main/50 focus-visible:ring-1 focus-visible:ring-main/15;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .ui-select--open {
+    @apply border-main/50 ring-1 ring-main/15;
+  }
+
+  .ui-select--with-leading {
+    @apply pl-8;
+  }
+
+  .ui-select-value {
+    @apply min-w-0 flex-1 truncate text-left;
+  }
+
+  .ui-select-leading {
+    @apply pointer-events-none absolute left-2.5 top-1/2 z-10 flex -translate-y-1/2 items-center;
+  }
+
+  .ui-select-chevron {
+    @apply ml-1.5 flex shrink-0 items-center text-text-secondary/50 transition-transform duration-150;
+  }
+
+  .ui-select-chevron--open {
+    @apply rotate-180 text-main/70;
+  }
+
+  .ui-select-chevron-icon {
+    @apply h-3.5 w-3.5;
+  }
+
+  .ui-select-menu {
+    @apply absolute left-0 right-0 z-30 mt-1 max-h-52 overflow-y-auto rounded-xl border border-border/70 bg-surface-card p-1 shadow-card-hover;
+  }
+
+  .ui-select-option {
+    @apply flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-text-primary transition-colors;
+    @apply hover:bg-main/10;
+  }
+
+  .ui-select-option--selected {
+    @apply bg-main/10 font-medium text-main;
+  }
+
+  .ui-select-check {
+    @apply h-4 w-4 shrink-0;
+  }
 }
 

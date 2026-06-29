@@ -11,9 +11,21 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Card hover className="flex h-full flex-col">
       <div className="mb-3 flex items-start justify-between gap-2">
-        <h3 className="text-lg font-semibold text-text-primary">
-          {project.title}
-        </h3>
+        <div className="min-w-0">
+          <h3 className="text-lg font-semibold text-text-primary">
+            {project.title}
+          </h3>
+          {(project.organization || project.role) && (
+            <p className="mt-1 text-xs text-text-secondary">
+              {[project.organization, project.role].filter(Boolean).join(' · ')}
+            </p>
+          )}
+          {project.marketContext && (
+            <p className="mt-2 truncate rounded-lg bg-main/5 px-2.5 py-2 text-xs text-text-secondary">
+              {project.marketContext}
+            </p>
+          )}
+        </div>
         <span className="shrink-0 text-xs text-text-secondary">
           {project.period}
         </span>
