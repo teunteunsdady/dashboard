@@ -17,8 +17,9 @@ import type {
 
 /** 가게부 데이터 로드·CRUD·월별 집계 */
 export function useLedger(initialMonth?: string) {
-  const { user } = useAuth()
+  const { user, dataOwnerId, canWrite } = useAuth()
   const useCloud = isSupabaseConfigured() && Boolean(user)
+  const ownerId = dataOwnerId ?? user?.id ?? null
 
   const [month, setMonth] = useState(initialMonth ?? formatMonthKey())
   const [entries, setEntries] = useState<LedgerEntry[]>([])
@@ -28,7 +29,7 @@ export function useLedger(initialMonth?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
-    if (!useCloud || !user) {
+    if (!useCloud || !user || !ownerId) {
       setEntries([])
       setBudgets([])
       setRecurring([])
@@ -41,17 +42,19 @@ export function useLedger(initialMonth?: string) {
 
     try {
       const [entryList, budgetList, recurringList] = await Promise.all([
-        ledgerService.fetchLedgerEntries(user.id),
-        ledgerService.fetchLedgerBudgets(user.id),
-        ledgerService.fetchLedgerRecurring(user.id),
+        ledgerService.fetchLedgerEntries(ownerId),
+        ledgerService.fetchLedgerBudgets(ownerId),
+        ledgerService.fetchLedgerRecurring(ownerId),
       ])
 
-      const applied = await ledgerService.applyRecurringForMonth(
-        user.id,
-        month,
-        recurringList,
-        entryList,
-      )
+      const applied = canWrite
+        ? await ledgerService.applyRecurringForMonth(
+            ownerId,
+            month,
+            recurringList,
+            entryList,
+          )
+        : []
 
       const mergedEntries =
         applied.length > 0
@@ -61,7 +64,7 @@ export function useLedger(initialMonth?: string) {
           : entryList
 
       if (applied.length > 0) {
-        const refreshedRecurring = await ledgerService.fetchLedgerRecurring(user.id)
+        const refreshedRecurring = await ledgerService.fetchLedgerRecurring(ownerId)
         setRecurring(refreshedRecurring)
       } else {
         setRecurring(recurringList)
@@ -74,7 +77,7 @@ export function useLedger(initialMonth?: string) {
     } finally {
       setLoading(false)
     }
-  }, [useCloud, user, month])
+  }, [useCloud, user, ownerId, month, canWrite])
 
   useEffect(() => {
     reload()
@@ -109,19 +112,21 @@ export function useLedger(initialMonth?: string) {
 
   const addEntry = useCallback(
     async (entry: Omit<LedgerEntry, 'id'>) => {
-      if (!useCloud || !user) throw new Error('로그인이 필요합니다.')
-      const saved = await ledgerService.createLedgerEntry(entry, user.id)
+      if (!useCloud || !user || !ownerId) throw new Error('로그인이 필요합니다.')
+      if (!canWrite) throw new Error('읽기 전용 계정은 가게부를 수정할 수 없습니다.')
+      const saved = await ledgerService.createLedgerEntry(entry, ownerId)
       setEntries((prev) =>
         [saved, ...prev].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)),
       )
       return saved
     },
-    [useCloud, user],
+    [useCloud, user, ownerId, canWrite],
   )
 
   const updateEntry = useCallback(
     async (entry: LedgerEntry) => {
-      if (!useCloud || !user) return
+      if (!useCloud || !user || !ownerId) return
+      if (!canWrite) throw new Error('읽기 전용 계정은 가게부를 수정할 수 없습니다.')
       const prev = entries
       setEntries((list) =>
         list
@@ -129,34 +134,35 @@ export function useLedger(initialMonth?: string) {
           .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)),
       )
       try {
-        await ledgerService.updateLedgerEntry(entry, user.id)
+        await ledgerService.updateLedgerEntry(entry, ownerId)
       } catch (err) {
         setEntries(prev)
         throw err
       }
     },
-    [useCloud, user, entries],
+    [useCloud, user, ownerId, canWrite, entries],
   )
 
   const deleteEntry = useCallback(
     async (id: string) => {
-      if (!useCloud || !user) return
+      if (!useCloud || !user || !ownerId || !canWrite) return
       const prev = entries
       setEntries((list) => list.filter((e) => e.id !== id))
       try {
-        await ledgerService.deleteLedgerEntry(id, user.id)
+        await ledgerService.deleteLedgerEntry(id, ownerId)
       } catch (err) {
         setEntries(prev)
         setError(err instanceof Error ? err.message : '삭제 실패')
       }
     },
-    [useCloud, user, entries],
+    [useCloud, user, ownerId, canWrite, entries],
   )
 
   const upsertBudget = useCallback(
     async (budget: Omit<LedgerBudget, 'id'> & { id?: string }) => {
-      if (!useCloud || !user) throw new Error('로그인이 필요합니다.')
-      const saved = await ledgerService.upsertLedgerBudget(budget, user.id)
+      if (!useCloud || !user || !ownerId) throw new Error('로그인이 필요합니다.')
+      if (!canWrite) throw new Error('읽기 전용 계정은 가게부를 수정할 수 없습니다.')
+      const saved = await ledgerService.upsertLedgerBudget(budget, ownerId)
       setBudgets((prev) => {
         const rest = prev.filter(
           (b) => !(b.month === saved.month && b.category === saved.category),
@@ -165,44 +171,45 @@ export function useLedger(initialMonth?: string) {
       })
       return saved
     },
-    [useCloud, user],
+    [useCloud, user, ownerId, canWrite],
   )
 
   const deleteBudget = useCallback(
     async (id: string) => {
-      if (!useCloud || !user) return
-      await ledgerService.deleteLedgerBudget(id, user.id)
+      if (!useCloud || !user || !ownerId || !canWrite) return
+      await ledgerService.deleteLedgerBudget(id, ownerId)
       setBudgets((prev) => prev.filter((b) => b.id !== id))
     },
-    [useCloud, user],
+    [useCloud, user, ownerId, canWrite],
   )
 
   const addRecurring = useCallback(
     async (item: Omit<LedgerRecurring, 'id' | 'lastAppliedMonth'>) => {
-      if (!useCloud || !user) throw new Error('로그인이 필요합니다.')
-      const saved = await ledgerService.createLedgerRecurring(item, user.id)
+      if (!useCloud || !user || !ownerId) throw new Error('로그인이 필요합니다.')
+      if (!canWrite) throw new Error('읽기 전용 계정은 가게부를 수정할 수 없습니다.')
+      const saved = await ledgerService.createLedgerRecurring(item, ownerId)
       setRecurring((prev) => [...prev, saved])
       return saved
     },
-    [useCloud, user],
+    [useCloud, user, ownerId, canWrite],
   )
 
   const updateRecurring = useCallback(
     async (item: LedgerRecurring) => {
-      if (!useCloud || !user) return
-      await ledgerService.updateLedgerRecurring(item, user.id)
+      if (!useCloud || !user || !ownerId || !canWrite) return
+      await ledgerService.updateLedgerRecurring(item, ownerId)
       setRecurring((prev) => prev.map((r) => (r.id === item.id ? item : r)))
     },
-    [useCloud, user],
+    [useCloud, user, ownerId, canWrite],
   )
 
   const deleteRecurring = useCallback(
     async (id: string) => {
-      if (!useCloud || !user) return
-      await ledgerService.deleteLedgerRecurring(id, user.id)
+      if (!useCloud || !user || !ownerId || !canWrite) return
+      await ledgerService.deleteLedgerRecurring(id, ownerId)
       setRecurring((prev) => prev.filter((r) => r.id !== id))
     },
-    [useCloud, user],
+    [useCloud, user, ownerId, canWrite],
   )
 
   return {

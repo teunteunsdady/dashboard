@@ -2,7 +2,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import fs from 'node:fs'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
-import { getBusArrivalsWithCache } from './server/busCache.js'
+import { BusQuotaExhaustedError, getBusArrivalsWithCache } from './server/busCache.js'
 
 const EVENT_DEBUG_LOG = path.resolve(process.cwd(), 'logs', 'event-validation.log')
 
@@ -82,6 +82,17 @@ function busApiDevPlugin(env: Record<string, string>): Plugin {
           response.setHeader('Content-Type', 'application/json; charset=utf-8')
           response.end(JSON.stringify(payload))
         } catch (error) {
+          if (error instanceof BusQuotaExhaustedError) {
+            response.statusCode = 429
+            response.setHeader('Content-Type', 'application/json; charset=utf-8')
+            response.end(
+              JSON.stringify({
+                error: error.message,
+                quota: error.quota,
+              }),
+            )
+            return
+          }
           response.statusCode = 500
           response.setHeader('Content-Type', 'application/json; charset=utf-8')
           response.end(

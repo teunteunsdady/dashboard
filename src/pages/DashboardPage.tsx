@@ -9,6 +9,8 @@ import {
 } from "../components/calendar/EventModal";
 import { EventNotificationBanner } from "../components/calendar/EventNotificationBanner";
 import { TodayEventsPanel } from "../components/calendar/TodayEventsPanel";
+import { ReadOnlyBanner } from "../components/auth/ReadOnlyBanner";
+import { useAuth } from "../contexts/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import { useEventNotifications } from "../hooks/useEventNotifications";
 import { isSupabaseConfigured } from "../lib/supabase";
@@ -25,6 +27,7 @@ const closedModal: ModalState = { isOpen: false, mode: "create", event: null };
 
 /** Dashboard 페이지 — FullCalendar 일정 관리 */
 export function DashboardPage() {
+  const { canWrite } = useAuth();
   const {
     events,
     filteredEvents,
@@ -40,13 +43,14 @@ export function DashboardPage() {
     clearError,
   } = useEvents();
 
-  useEventNotifications(events);
+  useEventNotifications(canWrite ? events : []);
 
   const [modal, setModal] = useState<ModalState>(closedModal);
   const [calendarView, setCalendarView] =
     useState<CalendarViewType>("dayGridMonth");
 
   const openCreate = (start?: string, allDay = true) => {
+    if (!canWrite) return;
     setModal({
       isOpen: true,
       mode: "create",
@@ -105,13 +109,16 @@ export function DashboardPage() {
         </p>
       )}
 
-      <EventNotificationBanner events={events} />
+      {!canWrite && <ReadOnlyBanner />}
+
+      {canWrite && <EventNotificationBanner events={events} />}
 
       <TodayEventsPanel
         events={filteredEvents}
         categories={categories}
         onEventClick={openEdit}
         onAddClick={() => openCreate(localToday(), true)}
+        readOnly={!canWrite}
       />
 
       <CalendarView
@@ -125,6 +132,7 @@ export function DashboardPage() {
         onAddClick={() => openCreate()}
         currentView={calendarView}
         onViewChange={setCalendarView}
+        readOnly={!canWrite}
       />
 
       <EventModal
@@ -135,6 +143,7 @@ export function DashboardPage() {
         onClose={closeModal}
         onSave={handleSave}
         onDelete={deleteEvent}
+        readOnly={!canWrite}
       />
     </div>
   );

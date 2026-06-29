@@ -11,7 +11,7 @@ export function LoginPage() {
   const from = (location.state as { from?: string })?.from ?? '/dashboard'
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -33,8 +33,8 @@ export function LoginPage() {
 
     const err =
       mode === 'signin'
-        ? await signIn(email, password)
-        : await signUp(email, password)
+        ? await signIn(identifier, password)
+        : await signUp(identifier, password)
 
     if (err) {
       setError(err)
@@ -56,14 +56,23 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium">이메일</label>
+            <label className="mb-1.5 block text-sm font-medium">
+              {mode === 'signin' ? '이메일 또는 아이디' : '이메일'}
+            </label>
             <input
-              type="email"
+              type={mode === 'signin' ? 'text' : 'email'}
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder={mode === 'signin' ? '이메일 또는 readOnly' : undefined}
               className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-main focus:ring-2 focus:ring-main/20"
             />
+            {mode === 'signin' && (
+              <p className="mt-1.5 text-xs text-text-secondary">
+                읽기 전용 계정은 아이디만 입력해도 됩니다. (예: readOnly)
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium">비밀번호</label>

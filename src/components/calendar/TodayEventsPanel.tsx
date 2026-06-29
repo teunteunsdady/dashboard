@@ -14,6 +14,7 @@ interface TodayEventsPanelProps {
   categories: EventCategoryMeta[]
   onEventClick: (event: CalendarEvent) => void
   onAddClick: () => void
+  readOnly?: boolean
 }
 
 /** Dashboard 상단 — 오늘 일정 요약 */
@@ -22,6 +23,7 @@ export function TodayEventsPanel({
   categories,
   onEventClick,
   onAddClick,
+  readOnly = false,
 }: TodayEventsPanelProps) {
   const todayEvents = useMemo(() => getTodayEvents(events), [events])
   const heading = formatTodayHeading()
@@ -35,13 +37,15 @@ export function TodayEventsPanel({
           </p>
           <h2 className="text-lg font-semibold text-text-primary">{heading}</h2>
         </div>
-        <button
-          type="button"
-          onClick={onAddClick}
-          className="shrink-0 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:border-main/30 hover:text-main"
-        >
-          + 일정
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={onAddClick}
+            className="shrink-0 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:border-main/30 hover:text-main"
+          >
+            + 일정
+          </button>
+        )}
       </div>
 
       {todayEvents.length === 0 ? (

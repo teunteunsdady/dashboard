@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BUS_CLIENT_POLL_MS } from '../constants/bus'
 import {
+  BusFetchError,
   fetchBusArrival,
   type BusArrivalItem,
   type BusArrivalsResponse,
@@ -25,6 +26,7 @@ export function useBusArrivals(stopId: string) {
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(0)
   const [cached, setCached] = useState(false)
   const [quota, setQuota] = useState({ used: 0, limit: 1000, remaining: 1000 })
+  const [quotaExhausted, setQuotaExhausted] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -39,6 +41,7 @@ export function useBusArrivals(stopId: string) {
     setRefreshIntervalSec(data.refreshIntervalSec)
     setCached(data.cached)
     setQuota(data.quota)
+    setQuotaExhausted(data.quotaExhausted ?? data.quota.remaining <= 0)
     setSecondsLeft(secondsUntil(data.nextRefreshAt))
     hasDataRef.current = true
   }, [])
@@ -56,6 +59,10 @@ export function useBusArrivals(stopId: string) {
         const data = await fetchBusArrival(stopId)
         applyResponse(data)
       } catch (err) {
+        if (err instanceof BusFetchError && err.quota) {
+          setQuota(err.quota)
+          setQuotaExhausted(err.quota.remaining <= 0)
+        }
         setError(
           err instanceof Error
             ? err.message
@@ -109,6 +116,7 @@ export function useBusArrivals(stopId: string) {
     refreshIntervalSec,
     cached,
     quota,
+    quotaExhausted,
     secondsLeft,
     countdownLabel: formatCountdown(secondsLeft),
     loading,

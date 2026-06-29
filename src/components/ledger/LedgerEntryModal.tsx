@@ -19,6 +19,7 @@ interface LedgerEntryModalProps {
   onClose: () => void
   onSave: (entry: Omit<LedgerEntry, 'id'> | LedgerEntry) => Promise<void>
   onDelete?: (id: string) => void
+  readOnly?: boolean
 }
 
 const fieldClass =
@@ -32,6 +33,7 @@ export function LedgerEntryModal({
   onClose,
   onSave,
   onDelete,
+  readOnly = false,
 }: LedgerEntryModalProps) {
   const [type, setType] = useState<LedgerEntryType>('expense')
   const [category, setCategory] = useState(defaultCategoryForType('expense'))
@@ -68,7 +70,7 @@ export function LedgerEntryModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (saving) return
+    if (readOnly || saving) return
 
     const amount = parseAmountInput(amountRaw)
     if (!amount) {
@@ -111,9 +113,10 @@ export function LedgerEntryModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'create' ? '내역 추가' : '내역 수정'}
+      title={readOnly ? '내역 보기' : mode === 'create' ? '내역 추가' : '내역 수정'}
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <div className={readOnly ? 'pointer-events-none opacity-90' : undefined}>
         {error && (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {error}
@@ -178,9 +181,10 @@ export function LedgerEntryModal({
             placeholder="선택 사항"
           />
         </div>
+        </div>
 
         <div className="flex items-center justify-between pt-2">
-          {mode === 'edit' && onDelete && entry ? (
+          {!readOnly && mode === 'edit' && onDelete && entry ? (
             <button
               type="button"
               onClick={() => {
@@ -200,15 +204,17 @@ export function LedgerEntryModal({
               onClick={onClose}
               className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface"
             >
-              취소
+              {readOnly ? '닫기' : '취소'}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white hover:bg-main-dark disabled:opacity-50"
-            >
-              {saving ? '저장 중…' : mode === 'create' ? '추가' : '저장'}
-            </button>
+            {!readOnly && (
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white hover:bg-main-dark disabled:opacity-50"
+              >
+                {saving ? '저장 중…' : mode === 'create' ? '추가' : '저장'}
+              </button>
+            )}
           </div>
         </div>
       </form>

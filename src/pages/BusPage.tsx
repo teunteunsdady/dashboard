@@ -91,6 +91,7 @@ export function BusPage() {
     refreshIntervalSec,
     cached,
     quota,
+    quotaExhausted,
     countdownLabel,
     loading,
     refreshing,
@@ -143,10 +144,25 @@ export function BusPage() {
           <span className="rounded-full border border-border/70 bg-surface px-2.5 py-1">
             다음 {countdownLabel}
           </span>
-          <span className="rounded-full border border-border/70 bg-surface px-2.5 py-1">
-            오늘 {quota.used}/{quota.limit}회
+          <span
+            className={[
+              'rounded-full border px-2.5 py-1',
+              quotaExhausted
+                ? 'border-amber-300 bg-amber-50 text-amber-800'
+                : quota.remaining <= 50
+                  ? 'border-orange-200 bg-orange-50 text-orange-800'
+                  : 'border-border/70 bg-surface',
+            ].join(' ')}
+          >
+            오늘 {quota.used}/{quota.limit}회 · 남음 {quota.remaining}
           </span>
         </div>
+        {quotaExhausted && (
+          <p className="mt-2 text-[11px] leading-relaxed text-amber-800">
+            오늘 API 한도에 도달했습니다. 캐시된 정보가 있으면 표시되며, 자정(KST) 이후 다시
+            조회됩니다.
+          </p>
+        )}
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -166,6 +182,8 @@ export function BusPage() {
                   <code className="text-xs">.env</code>에 키를 넣고 개발 서버를
                   다시 시작하면 됩니다.
                 </>
+              ) : error.includes('한도') ? (
+                '오늘은 더 이상 새로고침할 수 없습니다. 자정(KST) 이후 다시 시도해 주세요.'
               ) : (
                 '잠시 후 새로고침해 보세요.'
               )}

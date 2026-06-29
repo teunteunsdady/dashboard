@@ -23,6 +23,7 @@ interface CalendarToolbarProps {
   currentView: CalendarViewType
   onViewChange: (view: CalendarViewType) => void
   onAddClick: () => void
+  readOnly?: boolean
 }
 
 /** 월간/주간 전환 + 일정 추가 */
@@ -30,6 +31,7 @@ export function CalendarToolbar({
   currentView,
   onViewChange,
   onAddClick,
+  readOnly = false,
 }: CalendarToolbarProps) {
   return (
     <div className="flex shrink-0 flex-nowrap items-center gap-2">
@@ -62,13 +64,15 @@ export function CalendarToolbar({
           </button>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onAddClick}
-        className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-main-dark"
-      >
-        + 일정 추가
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={onAddClick}
+          className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-main-dark"
+        >
+          + 일정 추가
+        </button>
+      )}
     </div>
   )
 }
@@ -119,6 +123,7 @@ interface CalendarViewProps {
   onAddClick: () => void
   currentView: CalendarViewType
   onViewChange: (view: CalendarViewType) => void
+  readOnly?: boolean
 }
 
 /** FullCalendar 기반 월간/주간 뷰 + 카테고리 필터 + 드래그 이동 */
@@ -133,6 +138,7 @@ export function CalendarView({
   onAddClick,
   currentView,
   onViewChange,
+  readOnly = false,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -171,6 +177,7 @@ export function CalendarView({
 
   /** 날짜/시간 슬롯 클릭 → 일정 추가 모달 (주간 뷰는 시간 포함) */
   const handleDateClick = (info: DateClickArg) => {
+    if (readOnly) return
     const isWeekView = currentView === 'timeGridWeek'
     if (isWeekView && info.dateStr.includes('T')) {
       onDateClick(info.dateStr, false)
@@ -314,6 +321,7 @@ export function CalendarView({
           currentView={currentView}
           onViewChange={onViewChange}
           onAddClick={onAddClick}
+          readOnly={readOnly}
         />
       </div>
 
@@ -351,10 +359,10 @@ export function CalendarView({
           dayMaxEvents={isMobile ? 2 : 3}
           fixedWeekCount={false}
           weekends
-          editable
-          eventDurationEditable
-          eventStartEditable
-          selectable
+          editable={!readOnly}
+          eventDurationEditable={!readOnly}
+          eventStartEditable={!readOnly}
+          selectable={!readOnly}
           slotDuration="00:30:00"
           slotLabelInterval="01:00:00"
           snapDuration="00:15:00"

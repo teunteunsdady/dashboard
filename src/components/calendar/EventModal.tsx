@@ -38,6 +38,7 @@ interface EventModalProps {
   onClose: () => void;
   onSave: (event: CalendarEvent) => Promise<void>;
   onDelete?: (id: string) => void;
+  readOnly?: boolean;
 }
 
 interface EventForm {
@@ -83,6 +84,7 @@ export function EventModal({
   onClose,
   onSave,
   onDelete,
+  readOnly = false,
 }: EventModalProps) {
   const [form, setForm] = useState<EventForm>(emptyForm());
   const [formError, setFormError] = useState<{
@@ -119,7 +121,7 @@ export function EventModal({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (saving) return;
+    if (readOnly || saving) return;
 
     const rawInputs = readEventFormRawInputs(e.currentTarget);
     eventDebugLog("EventModal: submit raw DOM", rawInputs);
@@ -247,9 +249,12 @@ export function EventModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === "create" ? "일정 추가" : "일정 수정"}
+      title={
+        readOnly ? "일정 보기" : mode === "create" ? "일정 추가" : "일정 수정"
+      }
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <div className={readOnly ? "pointer-events-none opacity-90" : undefined}>
         {formError && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600">
             <p className="font-medium">{formError.message}</p>
@@ -391,6 +396,7 @@ export function EventModal({
         <Toggle
           checked={form.notify}
           onChange={handleNotifyChange}
+          disabled={readOnly}
           label="브라우저 알림"
           description={
             form.allDay
@@ -411,9 +417,10 @@ export function EventModal({
             placeholder="선택 사항"
           />
         </div>
+        </div>
 
         <div className="mt-2 flex items-center justify-between border-t border-border/70 pt-4">
-          {mode === "edit" && onDelete ? (
+          {!readOnly && mode === "edit" && onDelete ? (
             <button
               type="button"
               onClick={handleDelete}
@@ -430,15 +437,17 @@ export function EventModal({
               onClick={onClose}
               className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface"
             >
-              취소
+              {readOnly ? "닫기" : "취소"}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white hover:bg-main-dark disabled:opacity-50"
-            >
-              {saving ? "저장 중…" : mode === "create" ? "추가" : "저장"}
-            </button>
+            {!readOnly && (
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white hover:bg-main-dark disabled:opacity-50"
+              >
+                {saving ? "저장 중…" : mode === "create" ? "추가" : "저장"}
+              </button>
+            )}
           </div>
         </div>
       </form>

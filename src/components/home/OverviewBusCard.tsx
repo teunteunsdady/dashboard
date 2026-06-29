@@ -13,6 +13,8 @@ interface OverviewBusCardProps {
   loading: boolean
   error: string | null
   updatedAt: string | null
+  quota?: { used: number; limit: number; remaining: number }
+  quotaExhausted?: boolean
   onRefresh: () => void
   refreshing: boolean
 }
@@ -32,6 +34,8 @@ export function OverviewBusCard({
   loading,
   error,
   updatedAt,
+  quota,
+  quotaExhausted = false,
   onRefresh,
   refreshing,
 }: OverviewBusCardProps) {
@@ -53,6 +57,7 @@ export function OverviewBusCard({
             <p className="mt-0.5 text-xs text-text-secondary">
               {option.routeNumber}번 · {option.travelDirection}
               {updatedLabel ? ` · ${updatedLabel} 기준` : ''}
+              {quota ? ` · API ${quota.remaining}회 남음` : ''}
             </p>
           )}
         </div>
@@ -85,6 +90,11 @@ export function OverviewBusCard({
         </p>
       ) : stop ? (
         <div className="mt-auto space-y-3">
+          {quotaExhausted && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              오늘 API 한도 도달 — 캐시 표시 중
+            </p>
+          )}
           <div
             className="rounded-xl px-4 py-3"
             style={{ backgroundColor: `${colors.accent}22` }}

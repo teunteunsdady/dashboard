@@ -5,20 +5,27 @@ import { Card } from '../ui/Card'
 interface LedgerBudgetSectionProps {
   statuses: BudgetStatus[]
   onManage: () => void
+  readOnly?: boolean
 }
 
-export function LedgerBudgetSection({ statuses, onManage }: LedgerBudgetSectionProps) {
+export function LedgerBudgetSection({
+  statuses,
+  onManage,
+  readOnly = false,
+}: LedgerBudgetSectionProps) {
   return (
     <Card className="p-4 md:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-text-primary">월 예산</h3>
-        <button
-          type="button"
-          onClick={onManage}
-          className="text-xs font-medium text-main hover:text-main-dark"
-        >
-          예산 설정
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={onManage}
+            className="text-xs font-medium text-main hover:text-main-dark"
+          >
+            예산 설정
+          </button>
+        )}
       </div>
 
       {statuses.length === 0 ? (

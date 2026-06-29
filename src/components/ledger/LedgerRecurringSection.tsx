@@ -14,12 +14,14 @@ interface LedgerRecurringSectionProps {
   items: LedgerRecurring[]
   onAdd: () => void
   onEdit: (item: LedgerRecurring) => void
+  readOnly?: boolean
 }
 
 export function LedgerRecurringSection({
   items,
   onAdd,
   onEdit,
+  readOnly = false,
 }: LedgerRecurringSectionProps) {
   return (
     <Card className="p-4 md:p-5">
@@ -30,13 +32,15 @@ export function LedgerRecurringSection({
             매월 해당 날짜에 내역이 자동으로 추가됩니다.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="shrink-0 rounded-xl bg-main px-3 py-1.5 text-xs font-medium text-white hover:bg-main-dark"
-        >
-          + 추가
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="shrink-0 rounded-xl bg-main px-3 py-1.5 text-xs font-medium text-white hover:bg-main-dark"
+          >
+            + 추가
+          </button>
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -46,18 +50,39 @@ export function LedgerRecurringSection({
           {items.map((item) => {
             const meta = getLedgerCategoryMeta(item.category)
             const isIncome = item.type === 'income'
+            const rowClass = [
+              'flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left',
+              item.active
+                ? 'border-border/80 bg-surface'
+                : 'border-border/50 bg-surface/50 opacity-60',
+              !readOnly && 'transition-colors hover:border-main/25',
+            ].join(' ')
+
             return (
               <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => onEdit(item)}
-                  className={[
-                    'flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
-                    item.active
-                      ? 'border-border/80 bg-surface hover:border-main/25'
-                      : 'border-border/50 bg-surface/50 opacity-60',
-                  ].join(' ')}
-                >
+                {readOnly ? (
+                  <div className={rowClass}>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-text-primary">
+                      {item.title}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-text-secondary">
+                      매월 {item.dayOfMonth}일 · {meta?.label}
+                      {!item.active && ' · 비활성'}
+                    </span>
+                  </span>
+                  <span
+                    className={[
+                      'shrink-0 text-sm font-semibold tabular-nums',
+                      isIncome ? 'text-emerald-700' : 'text-red-600',
+                    ].join(' ')}
+                  >
+                    {isIncome ? '+' : '-'}
+                    {formatKrw(item.amount)}
+                  </span>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => onEdit(item)} className={rowClass}>
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-text-primary">
                       {item.title}
@@ -77,6 +102,7 @@ export function LedgerRecurringSection({
                     {formatKrw(item.amount)}
                   </span>
                 </button>
+                )}
               </li>
             )
           })}

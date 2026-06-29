@@ -18,3 +18,10 @@ export interface Skill {
   name: string
   category: 'frontend' | 'backend' | 'devops' | 'design' | 'other'
 }
+
+export type AppRole = 'owner' | 'readonly'
+
+export interface UserProfile {
+  app_role: AppRole
+  data_owner_id: string | null
+}

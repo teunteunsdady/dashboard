@@ -12,8 +12,9 @@ import type { CalendarEvent, EventCategory } from '../types/calendar'
 
 /** 일정 데이터 로드·필터링·CRUD (Supabase 또는 localStorage) */
 export function useEvents() {
-  const { user } = useAuth()
+  const { user, dataOwnerId, canWrite } = useAuth()
   const useCloud = isSupabaseConfigured() && Boolean(user)
+  const ownerId = dataOwnerId ?? user?.id ?? null
 
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [categories, setCategories] = useState<
@@ -40,8 +41,8 @@ export function useEvents() {
         setCategories(categoriesRes)
         setActiveFilters(new Set(categoriesRes.map((c) => c.id)))
 
-        if (useCloud && user) {
-          const cloudEvents = await supabaseEvents.fetchEvents(user.id)
+        if (useCloud && user && ownerId) {
+          const cloudEvents = await supabaseEvents.fetchEvents(ownerId)
           if (!cancelled) setEvents(cloudEvents)
         } else if (!isSupabaseConfigured()) {
           const stored = loadStoredEvents()
@@ -63,9 +64,7 @@ export function useEvents() {
     return () => {
       cancelled = true
     }
-  }, [useCloud, user])
-
-  // localStorage 모드: 변경 시 자동 저장
+  }, [useCloud, user, ownerId])
   useEffect(() => {
     if (!loading && !isSupabaseConfigured()) {
       saveStoredEvents(events)
@@ -88,13 +87,14 @@ export function useEvents() {
 
   const addEvent = useCallback(
     async (event: Omit<CalendarEvent, 'id'>) => {
-      if (useCloud && user) {
+      if (useCloud && user && ownerId) {
+        if (!canWrite) throw new Error('읽기 전용 계정은 일정을 추가할 수 없습니다.')
         const optimisticId = generateEventId()
         const optimisticEvent: CalendarEvent = { ...event, id: optimisticId }
         setEvents((prev) => [...prev, optimisticEvent])
 
         try {
-          const saved = await supabaseEvents.createEvent(event, user.id)
+          const saved = await supabaseEvents.createEvent(event, ownerId)
           setEvents((prev) =>
             prev.map((e) => (e.id === optimisticId ? saved : e)),
           )
@@ -112,7 +112,7 @@ export function useEvents() {
       setEvents((prev) => [...prev, newEvent])
       return newEvent
     },
-    [useCloud, user],
+    [useCloud, user, ownerId, canWrite],
   )
 
   const updateEvent = useCallback(
@@ -120,9 +120,10 @@ export function useEvents() {
       const prev = events
       setEvents((list) => list.map((e) => (e.id === updated.id ? updated : e)))
 
-      if (useCloud && user) {
+      if (useCloud && user && ownerId) {
+        if (!canWrite) throw new Error('읽기 전용 계정은 일정을 수정할 수 없습니다.')
         try {
-          await supabaseEvents.updateEvent(updated, user.id)
+          await supabaseEvents.updateEvent(updated, ownerId)
         } catch (err) {
           setEvents(prev)
           const message =
@@ -132,7 +133,7 @@ export function useEvents() {
         }
       }
     },
-    [useCloud, user, events],
+    [useCloud, user, ownerId, canWrite, events],
   )
 
   const deleteEvent = useCallback(
@@ -140,48 +141,51 @@ export function useEvents() {
       const prev = events
       setEvents((list) => list.filter((e) => e.id !== id))
 
-      if (useCloud && user) {
+      if (useCloud && user && ownerId) {
+        if (!canWrite) return
         try {
-          await supabaseEvents.deleteEvent(id, user.id)
+          await supabaseEvents.deleteEvent(id, ownerId)
         } catch (err) {
           setEvents(prev)
           setError(err instanceof Error ? err.message : '일정 삭제 실패')
         }
       }
     },
-    [useCloud, user, events],
+    [useCloud, user, ownerId, canWrite, events],
   )
 
   const moveEvent = useCallback(
     async (id: string, startStr: string, endStr?: string | null) => {
+      if (!canWrite) return
       const target = events.find((e) => e.id === id)
       if (!target) return
 
       const updated = applyEventDateChange(target, startStr, endStr)
       await updateEvent(updated)
     },
-    [events, updateEvent],
+    [events, updateEvent, canWrite],
   )
 
   const resetEvents = useCallback(async () => {
-    if (useCloud && user) {
-      await supabaseEvents.deleteAllEvents(user.id)
+    if (useCloud && user && ownerId) {
+      if (!canWrite) return
+      await supabaseEvents.deleteAllEvents(ownerId)
       setEvents([])
     } else {
       const mockEvents = await getEvents()
       setEvents(mockEvents)
     }
-  }, [useCloud, user])
+  }, [useCloud, user, ownerId, canWrite])
 
   const importFromLocal = useCallback(async () => {
     const stored = loadStoredEvents()
-    if (!stored?.length || !useCloud || !user) return 0
+    if (!stored?.length || !useCloud || !user || !ownerId || !canWrite) return 0
 
-    await supabaseEvents.importEvents(stored, user.id)
-    const merged = await supabaseEvents.fetchEvents(user.id)
+    await supabaseEvents.importEvents(stored, ownerId)
+    const merged = await supabaseEvents.fetchEvents(ownerId)
     setEvents(merged)
     return stored.length
-  }, [useCloud, user])
+  }, [useCloud, user, ownerId, canWrite])
 
   return {
     events,

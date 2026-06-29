@@ -1,4 +1,4 @@
-import { getBusArrivalsWithCache } from '../../server/busCache.js'
+import { BusQuotaExhaustedError, getBusArrivalsWithCache } from '../../server/busCache.js'
 
 function readStopId(request: { url?: string; query?: { stopId?: string | string[] } }) {
   if (request.query?.stopId) {
@@ -46,6 +46,12 @@ export default async function handler(
       .setHeader('Cache-Control', 'private, max-age=30')
     return response.status(200).json(payload)
   } catch (error) {
+    if (error instanceof BusQuotaExhaustedError) {
+      return response.status(429).json({
+        error: error.message,
+        quota: error.quota,
+      })
+    }
     return response.status(500).json({
       error:
         error instanceof Error ? error.message : '버스 도착 정보 조회 실패',

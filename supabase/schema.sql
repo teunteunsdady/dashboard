@@ -49,8 +49,15 @@ create table public.profiles (
   linkedin text,
   avatar_image text,
   avatar_emoji text,
+  app_role text not null default 'owner'
+    check (app_role in ('owner', 'readonly')),
+  data_owner_id uuid references auth.users (id) on delete cascade,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint profiles_readonly_owner_check check (
+    (app_role = 'owner' and data_owner_id is null)
+    or (app_role = 'readonly' and data_owner_id is not null)
+  )
 );
 
 create trigger profiles_updated_at
@@ -69,11 +76,41 @@ create policy "Users insert own profile"
   to authenticated
   with check (auth.uid() = id);
 
-create policy "Users update own profile"
+create or replace function public.can_write_data()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select p.app_role = 'owner' from public.profiles p where p.id = auth.uid()),
+    true
+  );
+$$;
+
+create or replace function public.data_owner_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select p.data_owner_id
+      from public.profiles p
+      where p.id = auth.uid() and p.app_role = 'readonly'
+    ),
+    auth.uid()
+  );
+$$;
+
+create policy "Owners update own profile"
   on public.profiles for update
   to authenticated
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
+  using (auth.uid() = id and public.can_write_data())
+  with check (auth.uid() = id and public.can_write_data());
 
 -- -----------------------------------------------------------------------------
 -- 3. skills — 기술 스택
@@ -162,11 +199,26 @@ create trigger events_updated_at
 
 alter table public.events enable row level security;
 
-create policy "Users manage own events"
-  on public.events for all
+create policy "Users read events"
+  on public.events for select
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (user_id = public.data_owner_id());
+
+create policy "Owners insert events"
+  on public.events for insert
+  to authenticated
+  with check (user_id = auth.uid() and public.can_write_data());
+
+create policy "Owners update events"
+  on public.events for update
+  to authenticated
+  using (user_id = auth.uid() and public.can_write_data())
+  with check (user_id = auth.uid() and public.can_write_data());
+
+create policy "Owners delete events"
+  on public.events for delete
+  to authenticated
+  using (user_id = auth.uid() and public.can_write_data());
 
 -- -----------------------------------------------------------------------------
 -- 5b. Web Push — 백그라운드 일정 알림
@@ -202,11 +254,26 @@ create index push_subscriptions_user_id_idx on public.push_subscriptions (user_i
 
 alter table public.push_subscriptions enable row level security;
 
-create policy "Users manage own push subscriptions"
-  on public.push_subscriptions for all
+create policy "Users read own push subscriptions"
+  on public.push_subscriptions for select
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (auth.uid() = user_id);
+
+create policy "Owners manage push subscriptions"
+  on public.push_subscriptions for insert
+  to authenticated
+  with check (auth.uid() = user_id and public.can_write_data());
+
+create policy "Owners update push subscriptions"
+  on public.push_subscriptions for update
+  to authenticated
+  using (auth.uid() = user_id and public.can_write_data())
+  with check (auth.uid() = user_id and public.can_write_data());
+
+create policy "Owners delete push subscriptions"
+  on public.push_subscriptions for delete
+  to authenticated
+  using (auth.uid() = user_id and public.can_write_data());
 
 create table public.event_push_dispatches (
   event_id uuid not null references public.events (id) on delete cascade,
@@ -309,23 +376,68 @@ alter table public.ledger_entries enable row level security;
 alter table public.ledger_budgets enable row level security;
 alter table public.ledger_recurring enable row level security;
 
-create policy "Users manage own ledger entries"
-  on public.ledger_entries for all
+create policy "Users read ledger entries"
+  on public.ledger_entries for select
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (user_id = public.data_owner_id());
 
-create policy "Users manage own ledger budgets"
-  on public.ledger_budgets for all
+create policy "Owners insert ledger entries"
+  on public.ledger_entries for insert
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  with check (user_id = auth.uid() and public.can_write_data());
 
-create policy "Users manage own ledger recurring"
-  on public.ledger_recurring for all
+create policy "Owners update ledger entries"
+  on public.ledger_entries for update
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (user_id = auth.uid() and public.can_write_data())
+  with check (user_id = auth.uid() and public.can_write_data());
+
+create policy "Owners delete ledger entries"
+  on public.ledger_entries for delete
+  to authenticated
+  using (user_id = auth.uid() and public.can_write_data());
+
+create policy "Users read ledger budgets"
+  on public.ledger_budgets for select
+  to authenticated
+  using (user_id = public.data_owner_id());
+
+create policy "Owners insert ledger budgets"
+  on public.ledger_budgets for insert
+  to authenticated
+  with check (user_id = auth.uid() and public.can_write_data());
+
+create policy "Owners update ledger budgets"
+  on public.ledger_budgets for update
+  to authenticated
+  using (user_id = auth.uid() and public.can_write_data())
+  with check (user_id = auth.uid() and public.can_write_data());
+
+create policy "Owners delete ledger budgets"
+  on public.ledger_budgets for delete
+  to authenticated
+  using (user_id = auth.uid() and public.can_write_data());
+
+create policy "Users read ledger recurring"
+  on public.ledger_recurring for select
+  to authenticated
+  using (user_id = public.data_owner_id());
+
+create policy "Owners insert ledger recurring"
+  on public.ledger_recurring for insert
+  to authenticated
+  with check (user_id = auth.uid() and public.can_write_data());
+
+create policy "Owners update ledger recurring"
+  on public.ledger_recurring for update
+  to authenticated
+  using (user_id = auth.uid() and public.can_write_data())
+  with check (user_id = auth.uid() and public.can_write_data());
+
+create policy "Owners delete ledger recurring"
+  on public.ledger_recurring for delete
+  to authenticated
+  using (user_id = auth.uid() and public.can_write_data());
 
 -- -----------------------------------------------------------------------------
 -- 7. 회원가입 시 profiles 행 자동 생성
@@ -350,3 +462,93 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- -----------------------------------------------------------------------------
+-- 8. 버스 API 일일 호출 한도 (전역 집계)
+-- -----------------------------------------------------------------------------
+create table public.bus_api_daily_usage (
+  usage_date date primary key,
+  used_count integer not null default 0 check (used_count >= 0),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.bus_api_daily_usage enable row level security;
+
+create or replace function public.get_bus_api_quota()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_date date := (timezone('Asia/Seoul', now()))::date;
+  v_used int;
+  v_limit int := 1000;
+begin
+  select coalesce(
+    (select u.used_count from public.bus_api_daily_usage u where u.usage_date = v_date),
+    0
+  ) into v_used;
+
+  return jsonb_build_object(
+    'used', v_used,
+    'limit', v_limit,
+    'remaining', greatest(0, v_limit - v_used)
+  );
+end;
+$$;
+
+create or replace function public.reserve_bus_api_calls(p_count int default 1)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_date date := (timezone('Asia/Seoul', now()))::date;
+  v_limit int := 1000;
+  v_used int;
+  v_new_used int;
+begin
+  if p_count < 1 then
+    raise exception 'p_count must be >= 1';
+  end if;
+
+  insert into public.bus_api_daily_usage (usage_date, used_count)
+  values (v_date, 0)
+  on conflict (usage_date) do nothing;
+
+  update public.bus_api_daily_usage
+  set
+    used_count = used_count + p_count,
+    updated_at = now()
+  where usage_date = v_date
+    and used_count + p_count <= v_limit
+  returning used_count into v_new_used;
+
+  if v_new_used is not null then
+    return jsonb_build_object(
+      'allowed', true,
+      'used', v_new_used,
+      'limit', v_limit,
+      'remaining', greatest(0, v_limit - v_new_used)
+    );
+  end if;
+
+  select u.used_count into v_used
+  from public.bus_api_daily_usage u
+  where u.usage_date = v_date;
+
+  return jsonb_build_object(
+    'allowed', false,
+    'used', coalesce(v_used, v_limit),
+    'limit', v_limit,
+    'remaining', greatest(0, v_limit - coalesce(v_used, v_limit))
+  );
+end;
+$$;
+
+revoke all on function public.get_bus_api_quota() from public;
+revoke all on function public.reserve_bus_api_calls(int) from public;
+grant execute on function public.get_bus_api_quota() to service_role;
+grant execute on function public.reserve_bus_api_calls(int) to service_role;

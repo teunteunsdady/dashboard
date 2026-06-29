@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ReadOnlyBanner } from '../components/auth/ReadOnlyBanner'
+import { useAuth } from '../contexts/AuthContext'
 import { EventModal, type EventModalMode } from '../components/calendar/EventModal'
 import { TodayEventsPanel } from '../components/calendar/TodayEventsPanel'
 import { OverviewBusCard } from '../components/home/OverviewBusCard'
@@ -26,6 +28,7 @@ const closedModal: ModalState = { isOpen: false, mode: 'create', event: null }
 
 /** 홈 — 일정·가계부·버스 한눈에 */
 export function HomePage() {
+  const { canWrite } = useAuth()
   const busStopId = useMemo(() => resolveOverviewBusStopId(), [])
   const commuteHint = useMemo(() => suggestCommuteBusStopId(), [])
 
@@ -57,12 +60,15 @@ export function HomePage() {
     loading: busLoading,
     refreshing,
     error: busError,
+    quota: busQuota,
+    quotaExhausted: busQuotaExhausted,
     refresh,
   } = useBusArrivals(busStopId)
 
   const [modal, setModal] = useState<ModalState>(closedModal)
 
   const openCreate = () => {
+    if (!canWrite) return
     setModal({
       isOpen: true,
       mode: 'create',
@@ -143,12 +149,15 @@ export function HomePage() {
         </div>
       )}
 
+      {!canWrite && <ReadOnlyBanner />}
+
       <div className="space-y-4">
         <TodayEventsPanel
           events={filteredEvents}
           categories={categories}
           onEventClick={openEdit}
           onAddClick={openCreate}
+          readOnly={!canWrite}
         />
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -174,6 +183,8 @@ export function HomePage() {
               loading={busLoading}
               error={busError}
               updatedAt={updatedAt}
+              quota={busQuota}
+              quotaExhausted={busQuotaExhausted}
               onRefresh={refresh}
               refreshing={refreshing}
             />
@@ -189,6 +200,7 @@ export function HomePage() {
         onClose={closeModal}
         onSave={handleSave}
         onDelete={deleteEvent}
+        readOnly={!canWrite}
       />
     </div>
   )

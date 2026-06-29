@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { ReadOnlyBanner } from '../components/auth/ReadOnlyBanner'
+import { useAuth } from '../contexts/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { useLedger } from '../hooks/useLedger'
 import { LedgerBudgetModal } from '../components/ledger/LedgerBudgetModal'
@@ -35,6 +37,7 @@ const closedRecurring: RecurringModalState = { isOpen: false, mode: 'create', it
 
 /** 가게부 — 수입·지출, 예산, 고정 항목, 통계 */
 export function LedgerPage() {
+  const { canWrite } = useAuth()
   const {
     month,
     setMonth,
@@ -99,16 +102,18 @@ export function LedgerPage() {
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-6 md:py-14">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <LedgerMonthNav month={month} onChange={setMonth} />
-        <button
-          type="button"
-          onClick={() =>
-            setEntryModal({ isOpen: true, mode: 'create', entry: null })
-          }
-          disabled={!useCloud}
-          className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-main-dark disabled:opacity-50"
-        >
-          + 내역 추가
-        </button>
+        {canWrite && (
+          <button
+            type="button"
+            onClick={() =>
+              setEntryModal({ isOpen: true, mode: 'create', entry: null })
+            }
+            disabled={!useCloud}
+            className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-main-dark disabled:opacity-50"
+          >
+            + 내역 추가
+          </button>
+        )}
       </div>
 
       {!isSupabaseConfigured() && (
@@ -116,6 +121,8 @@ export function LedgerPage() {
           Ledger는 Supabase 연동·로그인 후 사용할 수 있습니다.
         </p>
       )}
+
+      {!canWrite && <ReadOnlyBanner />}
 
       {error && (
         <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -143,6 +150,7 @@ export function LedgerPage() {
           <LedgerBudgetSection
             statuses={budgetStatuses}
             onManage={() => setBudgetOpen(true)}
+            readOnly={!canWrite}
           />
           <LedgerChart breakdown={breakdown} />
         </div>
@@ -155,6 +163,7 @@ export function LedgerPage() {
           onEdit={(item) =>
             setRecurringModal({ isOpen: true, mode: 'edit', item })
           }
+          readOnly={!canWrite}
         />
 
         <LedgerEntryList
@@ -172,6 +181,7 @@ export function LedgerPage() {
         onClose={() => setEntryModal(closedEntryModal)}
         onSave={handleSaveEntry}
         onDelete={deleteEntry}
+        readOnly={!canWrite}
       />
 
       <LedgerBudgetModal
