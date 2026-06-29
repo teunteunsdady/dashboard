@@ -4,6 +4,8 @@ import webpush from "npm:web-push@3.6.7";
 const DISPATCH_WINDOW_MS = 5 * 60 * 1000;
 const NOTIFY_TZ = "Asia/Seoul";
 const ALL_DAY_NOTIFY_HOUR = 9;
+const NOTIFY_MINUTES_BEFORE = 10;
+const NOTIFY_OFFSET_MS = NOTIFY_MINUTES_BEFORE * 60 * 1000;
 
 interface EventRow {
   id: string;
@@ -44,7 +46,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function computeNotifyAt(startsAtIso: string, allDay: boolean): Date {
-  if (!allDay) return new Date(startsAtIso);
+  if (!allDay) {
+    return new Date(new Date(startsAtIso).getTime() - NOTIFY_OFFSET_MS);
+  }
 
   const startsAt = new Date(startsAtIso);
   const datePart = new Intl.DateTimeFormat("en-CA", {
@@ -55,23 +59,27 @@ function computeNotifyAt(startsAtIso: string, allDay: boolean): Date {
   }).format(startsAt);
   const [year, month, day] = datePart.split("-").map(Number);
   // 09:00 KST = 00:00 UTC (한국은 서머타임 없음)
-  return new Date(
+  const allDayNotify = new Date(
     Date.UTC(year, month - 1, day, ALL_DAY_NOTIFY_HOUR - 9, 0, 0, 0),
   );
+  return new Date(allDayNotify.getTime() - NOTIFY_OFFSET_MS);
 }
 
-function formatNotificationBody(event: EventRow, notifyAt: Date): string {
+function formatNotificationBody(event: EventRow): string {
+  const startsAt = new Date(event.starts_at);
+
   if (event.all_day) {
-    return `오늘 종일 일정 · ${notifyAt.toLocaleDateString("ko-KR", { timeZone: NOTIFY_TZ })}`;
+    return `오늘 종일 일정 · ${startsAt.toLocaleDateString("ko-KR", { timeZone: NOTIFY_TZ })}`;
   }
 
-  return notifyAt.toLocaleString("ko-KR", {
+  const startLabel = startsAt.toLocaleString("ko-KR", {
     timeZone: NOTIFY_TZ,
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
+  return `${NOTIFY_MINUTES_BEFORE}분 후 시작 · ${startLabel}`;
 }
 
 function isAuthorized(req: Request): boolean {
@@ -161,7 +169,7 @@ Deno.serve(async (req) => {
     const notifyAtDate = new Date(event.notify_at);
     const payload = JSON.stringify({
       title: event.title,
-      body: formatNotificationBody(event, notifyAtDate),
+      body: formatNotificationBody(event),
       tag: `${event.id}:${notifyAtDate.getTime()}`,
       url: "/dashboard",
     });

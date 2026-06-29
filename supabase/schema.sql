@@ -270,9 +270,12 @@ stable
 as $$
   select case
     when p_all_day then
-      ((date_trunc('day', p_starts_at at time zone p_tz) + interval '9 hours') at time zone p_tz)
+      (
+        (date_trunc('day', p_starts_at at time zone p_tz) + interval '9 hours' - interval '10 minutes')
+        at time zone p_tz
+      )
     else
-      p_starts_at
+      p_starts_at - interval '10 minutes'
   end;
 $$;
 

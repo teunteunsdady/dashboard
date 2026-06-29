@@ -17,7 +17,7 @@ export interface CalendarEvent {
   category: EventCategory;
   description?: string;
   allDay?: boolean;
-  /** 브라우저 알림 (시작 시각 / 종일은 당일 09:00) */
+  /** 브라우저 알림 (시작 10분 전 / 종일은 당일 08:50) */
   notify?: boolean;
 }
 

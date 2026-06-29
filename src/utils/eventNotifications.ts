@@ -1,12 +1,16 @@
+import {
+  ALL_DAY_NOTIFY_HOUR,
+  EVENT_NOTIFY_MINUTES_BEFORE,
+} from "../constants/eventNotify";
 import { STORAGE_PREFIX } from "../constants/brand";
 import type { CalendarEvent } from "../types/calendar";
 import { isAllDayEvent } from "./calendarUtils";
 
 const NOTIFIED_KEY = `${STORAGE_PREFIX}-event-notified`;
-const ALL_DAY_NOTIFY_HOUR = 9;
+const NOTIFY_OFFSET_MS = EVENT_NOTIFY_MINUTES_BEFORE * 60 * 1000;
 
-/** 알림 발송 시각 (notify=false면 null) */
-export function getEventNotificationTime(event: CalendarEvent): Date | null {
+/** 일정 시작 시각 (notify=false면 null) */
+export function getEventStartTime(event: CalendarEvent): Date | null {
   if (!event.notify) return null;
 
   const datePart = event.start.slice(0, 10);
@@ -21,6 +25,13 @@ export function getEventNotificationTime(event: CalendarEvent): Date | null {
     : "00:00";
   const [hour, minute] = timePart.split(":").map(Number);
   return new Date(year, month - 1, day, hour, minute, 0, 0);
+}
+
+/** 알림 발송 시각 (시작 10분 전) */
+export function getEventNotificationTime(event: CalendarEvent): Date | null {
+  const start = getEventStartTime(event);
+  if (!start) return null;
+  return new Date(start.getTime() - NOTIFY_OFFSET_MS);
 }
 
 export function isNotificationSupported(): boolean {
@@ -95,25 +106,30 @@ export function clearEventNotificationHistory(eventId: string): void {
   saveNotifiedKeys(keys);
 }
 
-function formatNotificationBody(event: CalendarEvent, at: Date): string {
+function formatNotificationBody(event: CalendarEvent): string {
+  const start = getEventStartTime(event);
+  if (!start) return "";
+
   if (isAllDayEvent(event)) {
-    return `오늘 종일 일정 · ${at.toLocaleDateString("ko-KR")}`;
+    return `오늘 종일 일정 · ${start.toLocaleDateString("ko-KR")}`;
   }
-  return at.toLocaleString("ko-KR", {
+
+  const startLabel = start.toLocaleString("ko-KR", {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
+  return `${EVENT_NOTIFY_MINUTES_BEFORE}분 후 시작 · ${startLabel}`;
 }
 
-export function showEventNotification(event: CalendarEvent, at: Date): void {
+export function showEventNotification(event: CalendarEvent, notifyAt: Date): void {
   if (!isNotificationSupported() || Notification.permission !== "granted")
     return;
 
   const notification = new Notification(event.title, {
-    body: formatNotificationBody(event, at),
-    tag: notificationDedupeKey(event.id, at.getTime()),
+    body: formatNotificationBody(event),
+    tag: notificationDedupeKey(event.id, notifyAt.getTime()),
     icon: "/favicon.ico",
   });
 
