@@ -27,7 +27,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-text-primary/40 backdrop-blur-sm"
         onClick={onClose}
@@ -37,15 +37,17 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="relative w-full max-w-md rounded-2xl border border-border bg-surface-card p-6 shadow-card-hover"
+        className="relative flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-2xl border border-border bg-surface-card shadow-card-hover sm:max-h-[90dvh] sm:rounded-2xl"
       >
         <h2
           id="modal-title"
-          className="mb-5 text-lg font-semibold text-text-primary"
+          className="shrink-0 border-b border-border/60 px-5 py-4 text-lg font-semibold text-text-primary sm:px-6"
         >
           {title}
         </h2>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6 sm:py-5">
+          {children}
+        </div>
       </div>
     </div>
   )

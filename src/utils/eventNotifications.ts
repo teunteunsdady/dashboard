@@ -44,6 +44,15 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return result === "granted";
 }
 
+/** 사용자 탭 직후 호출 (iOS — requestPermission을 같은 제스처 흐름에서 시작) */
+export function requestNotificationPermissionFromUserGesture(): Promise<boolean> {
+  if (!isNotificationSupported()) return Promise.resolve(false);
+  if (Notification.permission === "granted") return Promise.resolve(true);
+  if (Notification.permission === "denied") return Promise.resolve(false);
+
+  return Notification.requestPermission().then((result) => result === "granted");
+}
+
 function loadNotifiedKeys(): Set<string> {
   try {
     const raw = localStorage.getItem(NOTIFIED_KEY);

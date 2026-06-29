@@ -19,7 +19,8 @@ import {
 } from "../../utils/calendarUtils";
 import {
   clearEventNotificationHistory,
-  requestNotificationPermission,
+  isNotificationSupported,
+  requestNotificationPermissionFromUserGesture,
 } from "../../utils/eventNotifications";
 import { DatePicker } from "../ui/DatePicker";
 import { Modal } from "../ui/Modal";
@@ -204,6 +205,44 @@ export function EventModal({
     }
   };
 
+  const handleNotifyChange = (notify: boolean) => {
+    if (!notify) {
+      setForm((prev) => ({ ...prev, notify: false }));
+      return;
+    }
+
+    if (!isNotificationSupported()) {
+      setFormError({
+        message:
+          "이 브라우저는 알림을 지원하지 않습니다. iOS는 홈 화면에 추가한 뒤 시도해 주세요.",
+      });
+      return;
+    }
+
+    if (Notification.permission === "granted") {
+      setForm((prev) => ({ ...prev, notify: true }));
+      setFormError(null);
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      setFormError({
+        message:
+          "알림이 차단되어 있습니다. 브라우저(또는 사이트) 설정에서 알림을 허용해 주세요.",
+      });
+      return;
+    }
+
+    void requestNotificationPermissionFromUserGesture().then((granted) => {
+      if (granted) {
+        setForm((prev) => ({ ...prev, notify: true }));
+        setFormError(null);
+      } else {
+        setFormError({ message: "알림 권한이 필요합니다." });
+      }
+    });
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -351,18 +390,12 @@ export function EventModal({
 
         <Toggle
           checked={form.notify}
-          onChange={async (notify) => {
-            if (notify) {
-              const granted = await requestNotificationPermission();
-              if (!granted) return;
-            }
-            setForm((prev) => ({ ...prev, notify }));
-          }}
+          onChange={handleNotifyChange}
           label="브라우저 알림"
           description={
             form.allDay
-              ? "종일 일정은 당일 09:00에 알려드려요. Dashboard 탭이 열려 있어야 합니다."
-              : "일정 시작 시간에 알려드려요. Dashboard 탭이 열려 있어야 합니다."
+              ? "종일 일정은 당일 09:00에 알려드려요. 백그라운드 알림을 켜면 탭을 닫아도 받을 수 있습니다."
+              : "일정 시작 시간에 알려드려요. 백그라운드 알림을 켜면 탭을 닫아도 받을 수 있습니다."
           }
         />
 
@@ -379,7 +412,7 @@ export function EventModal({
           />
         </div>
 
-        <div className="sticky bottom-0 -mx-1 mt-2 flex items-center justify-between border-t border-border/70 bg-surface-card/95 px-1 pt-4 backdrop-blur-sm">
+        <div className="mt-2 flex items-center justify-between border-t border-border/70 pt-4">
           {mode === "edit" && onDelete ? (
             <button
               type="button"
