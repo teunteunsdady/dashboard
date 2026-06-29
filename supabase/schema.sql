@@ -52,11 +52,18 @@ create table public.profiles (
   app_role text not null default 'owner'
     check (app_role in ('owner', 'readonly')),
   data_owner_id uuid references auth.users (id) on delete cascade,
+  readonly_scope text check (
+    readonly_scope is null or readonly_scope in ('full', 'personal_events')
+  ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_readonly_owner_check check (
-    (app_role = 'owner' and data_owner_id is null)
-    or (app_role = 'readonly' and data_owner_id is not null)
+    (app_role = 'owner' and data_owner_id is null and readonly_scope is null)
+    or (
+      app_role = 'readonly'
+      and data_owner_id is not null
+      and readonly_scope in ('full', 'personal_events')
+    )
   )
 );
 
@@ -104,6 +111,33 @@ as $$
     ),
     auth.uid()
   );
+$$;
+
+create or replace function public.readonly_has_full_data_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+  (
+    select p.readonly_scope = 'full'
+    from public.profiles p
+    where p.id = auth.uid() and p.app_role = 'readonly'
+  ),
+  true
+  );
+$$;
+
+create or replace function public.can_read_event_category(p_category text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.readonly_has_full_data_access() or p_category = 'personal';
 $$;
 
 create policy "Owners update own profile"
@@ -202,7 +236,10 @@ alter table public.events enable row level security;
 create policy "Users read events"
   on public.events for select
   to authenticated
-  using (user_id = public.data_owner_id());
+  using (
+    user_id = public.data_owner_id()
+    and public.can_read_event_category(category)
+  );
 
 create policy "Owners insert events"
   on public.events for insert
@@ -379,7 +416,10 @@ alter table public.ledger_recurring enable row level security;
 create policy "Users read ledger entries"
   on public.ledger_entries for select
   to authenticated
-  using (user_id = public.data_owner_id());
+  using (
+    user_id = public.data_owner_id()
+    and public.readonly_has_full_data_access()
+  );
 
 create policy "Owners insert ledger entries"
   on public.ledger_entries for insert
@@ -400,7 +440,10 @@ create policy "Owners delete ledger entries"
 create policy "Users read ledger budgets"
   on public.ledger_budgets for select
   to authenticated
-  using (user_id = public.data_owner_id());
+  using (
+    user_id = public.data_owner_id()
+    and public.readonly_has_full_data_access()
+  );
 
 create policy "Owners insert ledger budgets"
   on public.ledger_budgets for insert
@@ -421,7 +464,10 @@ create policy "Owners delete ledger budgets"
 create policy "Users read ledger recurring"
   on public.ledger_recurring for select
   to authenticated
-  using (user_id = public.data_owner_id());
+  using (
+    user_id = public.data_owner_id()
+    and public.readonly_has_full_data_access()
+  );
 
 create policy "Owners insert ledger recurring"
   on public.ledger_recurring for insert
@@ -552,3 +598,66 @@ revoke all on function public.get_bus_api_quota() from public;
 revoke all on function public.reserve_bus_api_calls(int) from public;
 grant execute on function public.get_bus_api_quota() to service_role;
 grant execute on function public.reserve_bus_api_calls(int) to service_role;
+
+-- -----------------------------------------------------------------------------
+-- 9. 버스 도착 알림 (Web Push + 서버 cron)
+-- -----------------------------------------------------------------------------
+create table public.bus_alarm_settings (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  enabled boolean not null default false,
+  days smallint[] not null default '{0,3}',
+  threshold_minutes smallint not null default 5
+    check (threshold_minutes >= 1 and threshold_minutes <= 30),
+  auto_stop boolean not null default true,
+  stop_id text not null default '1131-wolgye',
+  morning_start smallint not null default 7 check (morning_start >= 0 and morning_start <= 23),
+  morning_end smallint not null default 10 check (morning_end >= 0 and morning_end <= 24),
+  evening_start smallint not null default 17 check (evening_start >= 0 and evening_start <= 23),
+  evening_end smallint not null default 21 check (evening_end >= 0 and evening_end <= 24),
+  updated_at timestamptz not null default now()
+);
+
+create index bus_alarm_settings_enabled_idx
+  on public.bus_alarm_settings (enabled)
+  where enabled = true;
+
+alter table public.bus_alarm_settings enable row level security;
+
+create policy "Users manage own bus alarm settings"
+  on public.bus_alarm_settings for all
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create table public.bus_alarm_state (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  stop_id text not null,
+  armed boolean not null default true,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, stop_id)
+);
+
+alter table public.bus_alarm_state enable row level security;
+
+create policy "No client access to bus alarm state"
+  on public.bus_alarm_state for all
+  to authenticated
+  using (false)
+  with check (false);
+
+create table public.bus_arrival_cache (
+  stop_id text primary key,
+  arrival1 text not null,
+  stop_name text not null,
+  route_number text not null,
+  travel_direction text not null,
+  fetched_at timestamptz not null default now()
+);
+
+alter table public.bus_arrival_cache enable row level security;
+
+create policy "No client access to bus arrival cache"
+  on public.bus_arrival_cache for all
+  to authenticated
+  using (false)
+  with check (false);

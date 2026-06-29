@@ -11,9 +11,11 @@
 | 페이지 | 경로 | 설명 |
 |--------|------|------|
 | About | `/` | 프로필, 스킬, 프로젝트 소개 |
-| Dashboard | `/dashboard` | FullCalendar 기반 일정 관리 (Supabase 연동 시 로그인 필요) |
+| Home | `/home` | 오늘 일정·가계부·버스 한눈에 (로그인 필요) |
+| Dashboard | `/dashboard` | FullCalendar 일정 관리 (Supabase 연동 시 로그인 필요) |
+| Ledger | `/ledger` | 가계부 (로그인 필요) |
 | Bus | `/bus` | 서울시 버스 도착 정보 (모바일 UI, 정류장 3곳) |
-| Login | `/login` | Supabase 이메일 로그인 |
+| Login | `/login` | Supabase 이메일·아이디(`readOnly`) 로그인 |
 
 ### Dashboard
 
@@ -26,8 +28,14 @@
 
 - 노선 **1131** · **147** 정류장 도착 정보
 - 정류장별 출퇴근 방향 표시 (쩐 / 집)
-- API 캐시 및 일일 호출 제한 (1,000회)으로 할당량 관리
+- API 캐시 및 **전역** 일일 호출 제한 (1,000회, Supabase 집계)
 - iPhone 단축어·홈 화면 활용: [docs/ios-bus-guide.md](docs/ios-bus-guide.md)
+
+### 기타
+
+- **Web Push** 백그라운드 일정 알림 — [docs/web-push.md](docs/web-push.md)
+- **readOnly** 읽기 전용 계정 — [docs/readonly-account.md](docs/readonly-account.md)
+- **운영·장애 대응** — [docs/runbook.md](docs/runbook.md) · [docs/README.md](docs/README.md)
 
 ---
 
@@ -68,8 +76,12 @@ npm run dev
 | `VITE_SUPABASE_URL` | Dashboard용 | Supabase 프로젝트 URL |
 | `VITE_SUPABASE_ANON_KEY` | Dashboard용 | Supabase anon / publishable key |
 | `SEOUL_BUS_API_KEY` | Bus용 | 서울시 버스 API 인증키 (`VITE_` 접두사 **없음**) |
+| `VITE_VAPID_PUBLIC_KEY` | Push용 | Web Push 공개키 |
+| `SUPABASE_URL` | Bus API용 | 버스 일일 한도 전역 집계 (service role과 함께) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bus API용 | 서버 전용, 프론트에 넣지 마세요 |
 
-> `SEOUL_BUS_API_KEY`는 서버에서만 사용합니다. 프론트엔드에 넣지 마세요.
+> Edge Function 시크릿(`CRON_SECRET`, `VAPID_*`, `READONLY_*`)은 Supabase Dashboard에만 등록합니다.  
+> 전체 목록: [docs/README.md](docs/README.md)
 
 ---
 
@@ -108,7 +120,7 @@ npm run dev
 │   ├── pages/         # About, Dashboard, Bus, Login
 │   └── services/      # Supabase, 버스 API 클라이언트
 ├── supabase/          # DB 스키마·마이그레이션
-├── docs/              # iPhone 버스 활용 가이드
+├── docs/              # 운영 문서 (런북, Web Push, readOnly 등)
 └── vercel.json        # SPA rewrite + 빌드 설정
 ```
 

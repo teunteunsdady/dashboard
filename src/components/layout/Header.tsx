@@ -10,16 +10,26 @@ interface NavItem {
   end?: boolean
 }
 
-function getNavItems(canAccessPrivate: boolean): NavItem[] {
-  const publicItems: NavItem[] = [{ label: 'Bus', to: '/bus' }]
+function getNavItems(options: {
+  canAccessPrivate: boolean
+  canAccessLedger: boolean
+  canAccessBus: boolean
+}): NavItem[] {
+  const publicItems: NavItem[] = options.canAccessBus
+    ? [{ label: 'Bus', to: '/bus' }]
+    : []
   const privateItems: NavItem[] = [
     { label: 'Home', to: '/home' },
     { label: 'Dashboard', to: '/dashboard' },
-    { label: 'Ledger', to: '/ledger' },
   ]
+
+  if (options.canAccessLedger) {
+    privateItems.push({ label: 'Ledger', to: '/ledger' })
+  }
+
   const aboutItem: NavItem = { label: 'About', to: '/', end: true }
 
-  if (canAccessPrivate) {
+  if (options.canAccessPrivate) {
     return [...privateItems, ...publicItems, aboutItem]
   }
 
@@ -157,13 +167,18 @@ function MobileMenuOverlay({
 
 /** 상단 네비게이션 */
 export function Header({ mobileOnly = false }: { mobileOnly?: boolean }) {
-  const { user, loading, isConfigured, signOut } = useAuth()
+  const { user, loading, isConfigured, signOut, canAccessLedger, canAccessBus } =
+    useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const canAccessPrivate = !isConfigured || Boolean(user)
-  const navItems = getNavItems(canAccessPrivate)
+  const navItems = getNavItems({
+    canAccessPrivate,
+    canAccessLedger,
+    canAccessBus,
+  })
 
   useEffect(() => {
     setMenuOpen(false)

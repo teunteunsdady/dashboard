@@ -1,2 +1,8 @@
 [functions.send-event-reminders]
 verify_jwt = false
+
+[functions.send-bus-arrival-reminders]
+verify_jwt = false
+
+[functions.rotate-readonly-password]
+verify_jwt = false

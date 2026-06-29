@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BusAlarmPanel } from '../components/bus/BusAlarmPanel'
 import { BusStopPicker } from '../components/bus/BusStopPicker'
 import { DEFAULT_BUS_STOP_ID, formatStopDisplayName, routeColors } from '../data/busStops'
 import { useBusArrivals } from '../hooks/useBusArrivals'
@@ -198,6 +199,8 @@ export function BusPage() {
             )}
 
             {stop && <StopDetail stop={stop} />}
+
+            <BusAlarmPanel selectedStopId={selectedId} />
           </div>
         )}
       </div>

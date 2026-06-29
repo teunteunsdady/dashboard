@@ -70,7 +70,7 @@ export function LoginPage() {
             />
             {mode === 'signin' && (
               <p className="mt-1.5 text-xs text-text-secondary">
-                읽기 전용 계정은 아이디만 입력해도 됩니다. (예: readOnly)
+                읽기 전용: readOnly(전체) · readOnly2(개인 일정만) — 아이디만 입력해도 됩니다.
               </p>
             )}
           </div>

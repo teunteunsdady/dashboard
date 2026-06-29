@@ -13,6 +13,8 @@ import { resolveAuthEmail } from '../utils/authIdentifier'
 import {
   canWriteData,
   fetchUserProfile,
+  hasFullReadonlyAccess,
+  isPersonalEventsReadonly,
   resolveDataOwnerId,
 } from '../services/supabaseProfileService'
 import type { UserProfile } from '../types/profile'
@@ -26,6 +28,9 @@ interface AuthContextValue {
   isConfigured: boolean
   canWrite: boolean
   isReadOnly: boolean
+  isReadOnlyPersonal: boolean
+  canAccessLedger: boolean
+  canAccessBus: boolean
   dataOwnerId: string | null
   signIn: (email: string, password: string) => Promise<string | null>
   signUp: (email: string, password: string) => Promise<string | null>
@@ -54,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nextProfile = await fetchUserProfile(nextUser.id)
       setProfile(nextProfile)
     } catch {
-      setProfile({ app_role: 'owner', data_owner_id: null })
+      setProfile({ app_role: 'owner', data_owner_id: null, readonly_scope: null })
     } finally {
       setProfileLoading(false)
     }
@@ -108,6 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const canWrite = canWriteData(profile)
   const isReadOnly = profile?.app_role === 'readonly'
+  const isReadOnlyPersonal = isPersonalEventsReadonly(profile)
+  const canAccessLedger = hasFullReadonlyAccess(profile)
+  const canAccessBus = hasFullReadonlyAccess(profile)
   const dataOwnerId = user ? resolveDataOwnerId(user.id, profile) : null
 
   const value = useMemo(
@@ -120,6 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isConfigured: isSupabaseConfigured(),
       canWrite,
       isReadOnly,
+      isReadOnlyPersonal,
+      canAccessLedger,
+      canAccessBus,
       dataOwnerId,
       signIn,
       signUp,
@@ -133,6 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileLoading,
       canWrite,
       isReadOnly,
+      isReadOnlyPersonal,
+      canAccessLedger,
+      canAccessBus,
       dataOwnerId,
       signIn,
       signUp,

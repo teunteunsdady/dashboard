@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { BusAlarmWatcher } from './components/bus/BusAlarmWatcher'
 import { BusLayout } from './components/layout/BusLayout'
 import { MainLayout } from './components/layout/MainLayout'
 import { AboutPage } from './pages/AboutPage'
@@ -18,6 +19,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <BusAlarmWatcher />
         <Routes>
           <Route
             path="/bus"
@@ -49,7 +51,7 @@ function App() {
             <Route
               path="/ledger"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireFullReadonly>
                   <LedgerPage />
                 </ProtectedRoute>
               }

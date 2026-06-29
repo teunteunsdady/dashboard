@@ -28,7 +28,8 @@ const closedModal: ModalState = { isOpen: false, mode: 'create', event: null }
 
 /** 홈 — 일정·가계부·버스 한눈에 */
 export function HomePage() {
-  const { canWrite } = useAuth()
+  const { canWrite, canAccessLedger, canAccessBus, isReadOnlyPersonal } =
+    useAuth()
   const busStopId = useMemo(() => resolveOverviewBusStopId(), [])
   const commuteHint = useMemo(() => suggestCommuteBusStopId(), [])
 
@@ -116,7 +117,9 @@ export function HomePage() {
           {formatTodayHeading()}
         </h1>
         <p className="mt-2 text-sm text-text-secondary">
-          오늘 일정, 이번 달 가계부, 버스 도착을 한곳에서 확인하세요.
+          {isReadOnlyPersonal
+            ? '오늘 개인 일정을 확인하세요.'
+            : '오늘 일정, 이번 달 가계부, 버스 도착을 한곳에서 확인하세요.'}
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           <Link
@@ -125,18 +128,22 @@ export function HomePage() {
           >
             Dashboard
           </Link>
-          <Link
-            to="/ledger"
-            className="rounded-full border border-border bg-surface px-3 py-1.5 font-medium text-text-secondary hover:border-main/25 hover:text-main"
-          >
-            Ledger
-          </Link>
-          <Link
-            to="/bus"
-            className="rounded-full border border-border bg-surface px-3 py-1.5 font-medium text-text-secondary hover:border-main/25 hover:text-main"
-          >
-            Bus
-          </Link>
+          {canAccessLedger && (
+            <Link
+              to="/ledger"
+              className="rounded-full border border-border bg-surface px-3 py-1.5 font-medium text-text-secondary hover:border-main/25 hover:text-main"
+            >
+              Ledger
+            </Link>
+          )}
+          {canAccessBus && (
+            <Link
+              to="/bus"
+              className="rounded-full border border-border bg-surface px-3 py-1.5 font-medium text-text-secondary hover:border-main/25 hover:text-main"
+            >
+              Bus
+            </Link>
+          )}
         </div>
       </header>
 
@@ -160,36 +167,42 @@ export function HomePage() {
           readOnly={!canWrite}
         />
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <OverviewLedgerCard
-            month={month}
-            income={incomeTotal}
-            expense={expenseTotal}
-            balance={balance}
-            loading={ledgerLoading}
-            error={ledgerError}
-            overBudget={overBudget}
-          />
-
-          <div className="space-y-2">
-            {commuteHint && (
-              <p className="text-xs text-text-secondary">
-                출퇴근 시간대 — {getOverviewBusStopLabel(commuteHint)} 정류장 자동 선택
-              </p>
+        {(canAccessLedger || canAccessBus) && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {canAccessLedger && (
+              <OverviewLedgerCard
+                month={month}
+                income={incomeTotal}
+                expense={expenseTotal}
+                balance={balance}
+                loading={ledgerLoading}
+                error={ledgerError}
+                overBudget={overBudget}
+              />
             )}
-            <OverviewBusCard
-              stopId={busStopId}
-              stop={stop}
-              loading={busLoading}
-              error={busError}
-              updatedAt={updatedAt}
-              quota={busQuota}
-              quotaExhausted={busQuotaExhausted}
-              onRefresh={refresh}
-              refreshing={refreshing}
-            />
+
+            {canAccessBus && (
+              <div className="space-y-2">
+                {commuteHint && (
+                  <p className="text-xs text-text-secondary">
+                    출퇴근 시간대 — {getOverviewBusStopLabel(commuteHint)} 정류장 자동 선택
+                  </p>
+                )}
+                <OverviewBusCard
+                  stopId={busStopId}
+                  stop={stop}
+                  loading={busLoading}
+                  error={busError}
+                  updatedAt={updatedAt}
+                  quota={busQuota}
+                  quotaExhausted={busQuotaExhausted}
+                  onRefresh={refresh}
+                  refreshing={refreshing}
+                />
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       <EventModal

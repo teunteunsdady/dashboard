@@ -77,29 +77,15 @@ Invoke-RestMethod -Method POST `
 
 ## 5. 매월 비밀번호 자동 변경 (cron)
 
-[cron-job.org](https://cron-job.org) 등에서 **매일 1회** 호출 (함수 내부에서 KST 1일만 실제 변경):
+상세 설정: **[docs/readonly-cron.md](./readonly-cron.md)**
 
-- **URL**: `https://pwkagsqphsfvuvbzclqy.supabase.co/functions/v1/rotate-readonly-password`
-- **Method**: POST
-- **Schedule**: 매일 `00:10 UTC` (= KST 09:10) 또는 `15:05 UTC` (= KST 익일 00:05)  
-  → 함수가 **KST 날짜가 1일일 때만** 비밀번호를 바꿉니다.
-- **Header**: `Authorization: Bearer <CRON_SECRET>`
+**요약 (Supabase pg_cron — 권장)**
 
-테스트 (오늘이 1일이 아니어도 강제 변경):
+1. `supabase/migrations/20260704_readonly_password_cron.sql` 적용
+2. `supabase/scripts/setup-readonly-cron.sql` 에 `CRON_SECRET` 넣고 실행 (Vault 등록)
+3. 매일 15:05 UTC에 호출 → **KST 매월 1일 00:05**에만 비밀번호 변경
 
-```powershell
-Invoke-RestMethod -Method POST `
-  -Uri "https://pwkagsqphsfvuvbzclqy.supabase.co/functions/v1/rotate-readonly-password?force=1" `
-  -Headers @{ Authorization = "Bearer $secret" }
-```
-
-이번 달 비밀번호 미리보기:
-
-```powershell
-Invoke-RestMethod -Method GET `
-  -Uri "https://pwkagsqphsfvuvbzclqy.supabase.co/functions/v1/rotate-readonly-password?action=preview" `
-  -Headers @{ Authorization = "Bearer $secret" }
-```
+**대안:** [cron-job.org](https://cron-job.org) 에 POST Job 추가 (Web Push와 동일 방식)
 
 ---
 
