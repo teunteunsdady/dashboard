@@ -39,6 +39,7 @@ interface EventModalProps {
   onSave: (event: CalendarEvent) => Promise<void>;
   onDelete?: (id: string) => void;
   readOnly?: boolean;
+  hideCategoryTags?: boolean;
 }
 
 interface EventForm {
@@ -85,6 +86,7 @@ export function EventModal({
   onSave,
   onDelete,
   readOnly = false,
+  hideCategoryTags = false,
 }: EventModalProps) {
   const [form, setForm] = useState<EventForm>(emptyForm());
   const [formError, setFormError] = useState<{
@@ -380,18 +382,20 @@ export function EventModal({
           </>
         )}
 
-        <Select
-          label="카테고리"
-          id="event-category"
-          value={form.category}
-          onChange={(category) =>
-            setForm({ ...form, category: category as EventCategory })
-          }
-          options={categories.map((cat) => ({
-            value: cat.id,
-            label: cat.label,
-          }))}
-        />
+        {!hideCategoryTags && (
+          <Select
+            label="카테고리"
+            id="event-category"
+            value={form.category}
+            onChange={(category) =>
+              setForm({ ...form, category: category as EventCategory })
+            }
+            options={categories.map((cat) => ({
+              value: cat.id,
+              label: cat.label,
+            }))}
+          />
+        )}
 
         <Toggle
           checked={form.notify}

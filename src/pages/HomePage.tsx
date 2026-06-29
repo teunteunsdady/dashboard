@@ -43,6 +43,7 @@ export function HomePage() {
     updateEvent,
     deleteEvent,
     clearError: clearEventsError,
+    hideCategoryTags,
   } = useEvents()
 
   const {
@@ -165,6 +166,7 @@ export function HomePage() {
           onEventClick={openEdit}
           onAddClick={openCreate}
           readOnly={!canWrite}
+          hideCategoryTags={hideCategoryTags}
         />
 
         {(canAccessLedger || canAccessBus) && (
@@ -214,6 +216,7 @@ export function HomePage() {
         onSave={handleSave}
         onDelete={deleteEvent}
         readOnly={!canWrite}
+        hideCategoryTags={hideCategoryTags}
       />
     </div>
   )

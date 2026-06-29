@@ -124,6 +124,8 @@ interface CalendarViewProps {
   currentView: CalendarViewType
   onViewChange: (view: CalendarViewType) => void
   readOnly?: boolean
+  /** 개인 일정 전용 계정 — 카테고리 필터·툴팁 태그 숨김 */
+  hideCategoryTags?: boolean
 }
 
 /** FullCalendar 기반 월간/주간 뷰 + 카테고리 필터 + 드래그 이동 */
@@ -139,6 +141,7 @@ export function CalendarView({
   currentView,
   onViewChange,
   readOnly = false,
+  hideCategoryTags = false,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -312,11 +315,15 @@ export function CalendarView({
   return (
     <Card className="border-main/10">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CategoryFilter
-          categories={categories}
-          activeFilters={activeFilters}
-          onToggle={onToggleFilter}
-        />
+        {!hideCategoryTags ? (
+          <CategoryFilter
+            categories={categories}
+            activeFilters={activeFilters}
+            onToggle={onToggleFilter}
+          />
+        ) : (
+          <div />
+        )}
         <CalendarToolbar
           currentView={currentView}
           onViewChange={onViewChange}
@@ -387,13 +394,15 @@ export function CalendarView({
           style={{ left: tooltip.x, top: tooltip.y }}
         >
           <p className="font-semibold">{tooltip.title}</p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: tooltip.categoryColor }}
-            />
-            <p>{tooltip.categoryLabel}</p>
-          </div>
+          {!hideCategoryTags && (
+            <div className="mt-1.5 flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: tooltip.categoryColor }}
+              />
+              <p>{tooltip.categoryLabel}</p>
+            </div>
+          )}
           <p className="mt-1 text-slate-600">
             날짜: {tooltip.dateText}
           </p>

@@ -8,11 +8,19 @@ import {
 } from '../services/eventStorageService'
 import * as supabaseEvents from '../services/supabaseEventService'
 import { applyEventDateChange, generateEventId } from '../utils/calendarUtils'
-import type { CalendarEvent, EventCategory } from '../types/calendar'
+import type { CalendarEvent, EventCategory, EventCategoryMeta } from '../types/calendar'
+
+function categoriesForUser(
+  categories: EventCategoryMeta[],
+  personalOnly: boolean,
+): EventCategoryMeta[] {
+  if (!personalOnly) return categories
+  return categories.filter((category) => category.id === 'personal')
+}
 
 /** 일정 데이터 로드·필터링·CRUD (Supabase 또는 localStorage) */
 export function useEvents() {
-  const { user, dataOwnerId, canWrite } = useAuth()
+  const { user, dataOwnerId, canWrite, isReadOnlyPersonal } = useAuth()
   const useCloud = isSupabaseConfigured() && Boolean(user)
   const ownerId = dataOwnerId ?? user?.id ?? null
 
@@ -35,7 +43,10 @@ export function useEvents() {
       setError(null)
 
       try {
-        const categoriesRes = await getEventCategories()
+        const categoriesRes = categoriesForUser(
+          await getEventCategories(),
+          isReadOnlyPersonal,
+        )
         if (cancelled) return
 
         setCategories(categoriesRes)
@@ -64,7 +75,7 @@ export function useEvents() {
     return () => {
       cancelled = true
     }
-  }, [useCloud, user, ownerId])
+  }, [useCloud, user, ownerId, isReadOnlyPersonal])
   useEffect(() => {
     if (!loading && !isSupabaseConfigured()) {
       saveStoredEvents(events)
@@ -203,5 +214,6 @@ export function useEvents() {
     resetEvents,
     importFromLocal,
     clearError: () => setError(null),
+    hideCategoryTags: isReadOnlyPersonal,
   }
 }

@@ -41,6 +41,7 @@ export function DashboardPage() {
     deleteEvent,
     moveEvent,
     clearError,
+    hideCategoryTags,
   } = useEvents();
 
   useEventNotifications(canWrite ? events : []);
@@ -119,6 +120,7 @@ export function DashboardPage() {
         onEventClick={openEdit}
         onAddClick={() => openCreate(localToday(), true)}
         readOnly={!canWrite}
+        hideCategoryTags={hideCategoryTags}
       />
 
       <CalendarView
@@ -133,6 +135,7 @@ export function DashboardPage() {
         currentView={calendarView}
         onViewChange={setCalendarView}
         readOnly={!canWrite}
+        hideCategoryTags={hideCategoryTags}
       />
 
       <EventModal
@@ -144,6 +147,7 @@ export function DashboardPage() {
         onSave={handleSave}
         onDelete={deleteEvent}
         readOnly={!canWrite}
+        hideCategoryTags={hideCategoryTags}
       />
     </div>
   );
