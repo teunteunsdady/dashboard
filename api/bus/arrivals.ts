@@ -1,5 +1,24 @@
 import { BusQuotaExhaustedError, getBusArrivalsWithCache } from '../../server/busCache.js'
 
+function readForceRefresh(request: {
+  url?: string
+  query?: { force?: string | string[] }
+}) {
+  if (request.query?.force) {
+    const value = request.query.force
+    const raw = Array.isArray(value) ? value[0] : value
+    return raw === '1' || raw === 'true'
+  }
+
+  if (request.url) {
+    const url = new URL(request.url, 'http://localhost')
+    const raw = url.searchParams.get('force')
+    return raw === '1' || raw === 'true'
+  }
+
+  return false
+}
+
 function readStopId(request: { url?: string; query?: { stopId?: string | string[] } }) {
   if (request.query?.stopId) {
     const value = request.query.stopId
@@ -15,7 +34,11 @@ function readStopId(request: { url?: string; query?: { stopId?: string | string[
 }
 
 export default async function handler(
-  request: { method?: string; url?: string; query?: { stopId?: string | string[] } },
+  request: {
+    method?: string
+    url?: string
+    query?: { stopId?: string | string[]; force?: string | string[] }
+  },
   response: {
     status: (code: number) => {
       setHeader: (key: string, value: string) => typeof response
@@ -40,7 +63,9 @@ export default async function handler(
   }
 
   try {
-    const payload = await getBusArrivalsWithCache(stopId, serviceKey)
+    const payload = await getBusArrivalsWithCache(stopId, serviceKey, {
+      bypassCache: readForceRefresh(request),
+    })
     response
       .status(200)
       .setHeader('Cache-Control', 'private, max-age=30')

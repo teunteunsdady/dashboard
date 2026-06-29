@@ -27,6 +27,7 @@ export function useBusArrivals(stopId: string) {
   const [cached, setCached] = useState(false)
   const [quota, setQuota] = useState({ used: 0, limit: 1000, remaining: 1000 })
   const [quotaExhausted, setQuotaExhausted] = useState(false)
+  const [quotaGlobal, setQuotaGlobal] = useState(true)
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -42,6 +43,7 @@ export function useBusArrivals(stopId: string) {
     setCached(data.cached)
     setQuota(data.quota)
     setQuotaExhausted(data.quotaExhausted ?? data.quota.remaining <= 0)
+    setQuotaGlobal(data.quotaGlobal !== false)
     setSecondsLeft(secondsUntil(data.nextRefreshAt))
     hasDataRef.current = true
   }, [])
@@ -56,7 +58,7 @@ export function useBusArrivals(stopId: string) {
       setError(null)
 
       try {
-        const data = await fetchBusArrival(stopId)
+        const data = await fetchBusArrival(stopId, { force: manual })
         applyResponse(data)
       } catch (err) {
         if (err instanceof BusFetchError && err.quota) {
@@ -117,6 +119,7 @@ export function useBusArrivals(stopId: string) {
     cached,
     quota,
     quotaExhausted,
+    quotaGlobal,
     secondsLeft,
     countdownLabel: formatCountdown(secondsLeft),
     loading,

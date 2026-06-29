@@ -93,6 +93,7 @@ export function BusPage() {
     cached,
     quota,
     quotaExhausted,
+    quotaGlobal,
     countdownLabel,
     loading,
     refreshing,
@@ -162,6 +163,13 @@ export function BusPage() {
           <p className="mt-2 text-[11px] leading-relaxed text-amber-800">
             오늘 API 한도에 도달했습니다. 캐시된 정보가 있으면 표시되며, 자정(KST) 이후 다시
             조회됩니다.
+          </p>
+        )}
+        {!quotaGlobal && (
+          <p className="mt-2 text-[11px] leading-relaxed text-amber-800">
+            전역 호출 집계에 연결되지 않았습니다. Vercel(또는 로컬 .env)에{' '}
+            <code className="text-[10px]">SUPABASE_SERVICE_ROLE_KEY</code>를 등록하면 모든
+            기기·서버에서 동일한 횟수가 표시됩니다.
           </p>
         )}
       </header>

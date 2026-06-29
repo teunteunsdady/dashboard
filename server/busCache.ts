@@ -23,6 +23,8 @@ export interface BusArrivalsPayload {
   refreshIntervalSec: number
   quota: QuotaSnapshot
   quotaExhausted: boolean
+  /** false면 Vercel 인스턴스 메모리만 집계 중 */
+  quotaGlobal: boolean
 }
 
 export class BusQuotaExhaustedError extends Error {
@@ -44,6 +46,7 @@ function buildPayload(
   cached: boolean,
   quota: QuotaSnapshot,
   quotaExhausted: boolean,
+  quotaGlobal: boolean,
 ): BusArrivalsPayload {
   return {
     updatedAt: new Date(fetchedAt).toISOString(),
@@ -54,27 +57,37 @@ function buildPayload(
     refreshIntervalSec: Math.round(CACHE_TTL_MS / 1000),
     quota,
     quotaExhausted,
+    quotaGlobal,
   }
+}
+
+export interface BusArrivalsOptions {
+  /** true면 서버 캐시 무시 — 수동 새로고침·API 1회 소모 */
+  bypassCache?: boolean
 }
 
 /** 정류장별 캐시 — 선택한 정류장만 API 호출, 일일 한도는 Supabase 전역 집계 */
 export async function getBusArrivalsWithCache(
   stopId: string,
   serviceKey: string,
+  options: BusArrivalsOptions = {},
 ): Promise<BusArrivalsPayload> {
   const cachedEntry = cacheByStop.get(stopId)
   const cacheFresh =
-    cachedEntry && Date.now() - cachedEntry.fetchedAt < CACHE_TTL_MS
+    !options.bypassCache &&
+    cachedEntry &&
+    Date.now() - cachedEntry.fetchedAt < CACHE_TTL_MS
 
-  if (cacheFresh) {
-    const quota = await getBusApiQuota()
+  if (cacheFresh && cachedEntry) {
+    const quotaState = await getBusApiQuota()
     return buildPayload(
       stopId,
       cachedEntry.stop,
       cachedEntry.fetchedAt,
       true,
-      quota,
-      quota.remaining <= 0,
+      quotaState,
+      quotaState.remaining <= 0,
+      quotaState.global,
     )
   }
 
@@ -89,6 +102,7 @@ export async function getBusArrivalsWithCache(
         true,
         reserve.quota,
         true,
+        reserve.global,
       )
     }
     throw new BusQuotaExhaustedError(reserve.quota)
@@ -106,5 +120,6 @@ export async function getBusArrivalsWithCache(
     false,
     reserve.quota,
     reserve.quota.remaining <= 0,
+    reserve.global,
   )
 }

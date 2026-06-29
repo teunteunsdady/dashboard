@@ -23,6 +23,8 @@ export interface BusArrivalsResponse {
     remaining: number
   }
   quotaExhausted?: boolean
+  /** false면 서버가 Supabase 전역 집계에 연결되지 않음 */
+  quotaGlobal?: boolean
 }
 
 export class BusFetchError extends Error {
@@ -35,13 +37,20 @@ export class BusFetchError extends Error {
   }
 }
 
+export interface FetchBusArrivalOptions {
+  /** 수동 새로고침 — 서버 캐시 무시, API 1회 소모 */
+  force?: boolean
+}
+
 /** 선택한 정류장 도착 정보 조회 */
 export async function fetchBusArrival(
   stopId: string,
+  options: FetchBusArrivalOptions = {},
 ): Promise<BusArrivalsResponse> {
-  const response = await fetch(
-    `/api/bus/arrivals?stopId=${encodeURIComponent(stopId)}`,
-  )
+  const params = new URLSearchParams({ stopId })
+  if (options.force) params.set('force', '1')
+
+  const response = await fetch(`/api/bus/arrivals?${params.toString()}`)
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {

@@ -142,6 +142,8 @@ select status_code, content from net._http_response order by id desc limit 1;
 | `SEOUL_BUS_API_KEY` 오류 | Vercel env · 재배포 |
 | 한도 초과 | 자정(KST)까지 대기 |
 | 한도가 사람마다 다름 | `SUPABASE_SERVICE_ROLE_KEY` Vercel 등록 |
+| 화면에 「전역 집계 미연결」 | 위 키 없음 → 인스턴스 메모리만 사용 |
+| 새로고침해도 횟수 안 늘어남 | **캐시** (~86초) — ⟳ 버튼은 `force=1`로 1회 소모 |
 
 ```sql
 select * from public.get_bus_api_quota();

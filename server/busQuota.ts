@@ -10,6 +10,8 @@ export interface QuotaSnapshot {
 export interface ReserveResult {
   allowed: boolean
   quota: QuotaSnapshot
+  /** Supabase DB 전역 집계 여부 (false면 인스턴스 메모리 폴백) */
+  global: boolean
 }
 
 let adminClient: SupabaseClient | null | undefined
@@ -37,6 +39,11 @@ function getAdminClient(): SupabaseClient | null {
     auth: { autoRefreshToken: false, persistSession: false },
   })
   return adminClient
+}
+
+/** Supabase RPC로 전역 한도를 쓰는지 */
+export function isGlobalBusQuotaEnabled(): boolean {
+  return getAdminClient() !== null
 }
 
 function parseQuotaRow(value: unknown): QuotaSnapshot | null {
@@ -78,39 +85,48 @@ function reserveFallback(count: number): ReserveResult {
   const quota = getFallbackQuota()
 
   if (quota.remaining < count) {
-    return { allowed: false, quota }
+    return { allowed: false, quota, global: false }
   }
 
   fallbackQuota.used += count
   return {
     allowed: true,
     quota: getFallbackQuota(),
+    global: false,
   }
 }
 
 /** 전역 일일 호출량 조회 (증가 없음) */
-export async function getBusApiQuota(): Promise<QuotaSnapshot> {
+export async function getBusApiQuota(): Promise<QuotaSnapshot & { global: boolean }> {
   const client = getAdminClient()
   if (!client) {
     console.warn(
       '[bus-quota] SUPABASE_SERVICE_ROLE_KEY 없음 — 이 인스턴스 메모리만 집계합니다.',
     )
-    return getFallbackQuota()
+    return { ...getFallbackQuota(), global: false }
   }
 
   const { data, error } = await client.rpc('get_bus_api_quota')
   if (error) {
     console.error('[bus-quota] get_bus_api_quota failed:', error.message)
-    return getFallbackQuota()
+    return { ...getFallbackQuota(), global: false }
   }
 
-  return parseQuotaRow(data) ?? getFallbackQuota()
+  const quota = parseQuotaRow(data)
+  if (!quota) {
+    return { ...getFallbackQuota(), global: false }
+  }
+
+  return { ...quota, global: true }
 }
 
 /** 서울시 API 호출 전 원자적으로 할당량 예약 */
 export async function reserveBusApiCalls(count: number): Promise<ReserveResult> {
   const client = getAdminClient()
   if (!client) {
+    console.warn(
+      '[bus-quota] SUPABASE_SERVICE_ROLE_KEY 없음 — 전역 집계 대신 로컬 메모리를 씁니다.',
+    )
     return reserveFallback(count)
   }
 
@@ -129,5 +145,5 @@ export async function reserveBusApiCalls(count: number): Promise<ReserveResult> 
     return reserveFallback(count)
   }
 
-  return { allowed: row.allowed, quota }
+  return { allowed: row.allowed, quota, global: true }
 }

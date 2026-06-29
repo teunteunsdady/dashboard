@@ -47,6 +47,14 @@ function busApiDevPlugin(env: Record<string, string>): Plugin {
   return {
     name: 'bus-api-dev',
     configureServer(server) {
+      if (!process.env.SUPABASE_URL) {
+        process.env.SUPABASE_URL =
+          env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? ''
+      }
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_SERVICE_ROLE_KEY) {
+        process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY
+      }
+
       server.middlewares.use('/api/bus/arrivals', async (request, response) => {
         if (request.method !== 'GET') {
           response.statusCode = 405
@@ -69,6 +77,9 @@ function busApiDevPlugin(env: Record<string, string>): Plugin {
         try {
           const url = new URL(request.url ?? '', 'http://localhost')
           const stopId = url.searchParams.get('stopId')
+          const bypassCache =
+            url.searchParams.get('force') === '1' ||
+            url.searchParams.get('force') === 'true'
 
           if (!stopId) {
             response.statusCode = 400
@@ -77,7 +88,9 @@ function busApiDevPlugin(env: Record<string, string>): Plugin {
             return
           }
 
-          const payload = await getBusArrivalsWithCache(stopId, serviceKey)
+          const payload = await getBusArrivalsWithCache(stopId, serviceKey, {
+            bypassCache,
+          })
           response.statusCode = 200
           response.setHeader('Content-Type', 'application/json; charset=utf-8')
           response.end(JSON.stringify(payload))
