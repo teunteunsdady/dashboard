@@ -268,6 +268,7 @@ curl.exe -X POST "https://<프로젝트-ref>.supabase.co/functions/v1/send-event
 
 ## 관련 문서
 
+- [Web Push 테스트 시나리오](./web-push-test-scenarios.md)
 - [Web Push API (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Push_API)
 - [Supabase Edge Functions](https://supabase.com/docs/guides/functions)
 - [Supabase CLI](https://supabase.com/docs/guides/cli)

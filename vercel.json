@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/|sw\\.js|manifest\\.json|favicon\\.svg|icons\\.svg).*)",
       "destination": "/index.html"
     }
   ]

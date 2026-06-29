@@ -4,12 +4,27 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { APP_NAME_PREFIX, APP_NAME_SUFFIX } from '../../constants/brand'
 
-const navItems = [
-  { label: 'About', to: '/', end: true },
-  { label: 'Dashboard', to: '/dashboard' },
-  { label: 'Ledger', to: '/ledger' },
-  { label: 'Bus', to: '/bus' },
-]
+interface NavItem {
+  label: string
+  to: string
+  end?: boolean
+}
+
+function getNavItems(canAccessPrivate: boolean): NavItem[] {
+  const publicItems: NavItem[] = [{ label: 'Bus', to: '/bus' }]
+  const privateItems: NavItem[] = [
+    { label: 'Home', to: '/home' },
+    { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Ledger', to: '/ledger' },
+  ]
+  const aboutItem: NavItem = { label: 'About', to: '/', end: true }
+
+  if (canAccessPrivate) {
+    return [...privateItems, ...publicItems, aboutItem]
+  }
+
+  return [...publicItems, aboutItem]
+}
 
 function mobileNavLinkClass(isActive: boolean) {
   return [
@@ -57,12 +72,14 @@ function MobileMenuOverlay({
   showDesktopNav,
   isConfigured,
   user,
+  navItems,
   onClose,
   onSignOut,
 }: {
   showDesktopNav: boolean
   isConfigured: boolean
   user: ReturnType<typeof useAuth>['user']
+  navItems: NavItem[]
   onClose: () => void
   onSignOut: () => void
 }) {
@@ -120,6 +137,18 @@ function MobileMenuOverlay({
             </button>
           </>
         )}
+        {isConfigured && !user && (
+          <>
+            <div className="my-3 h-px bg-border/50" />
+            <NavLink
+              to="/login"
+              className={({ isActive }) => mobileNavLinkClass(isActive)}
+              onClick={onClose}
+            >
+              로그인
+            </NavLink>
+          </>
+        )}
       </nav>
     </div>,
     document.body,
@@ -128,10 +157,13 @@ function MobileMenuOverlay({
 
 /** 상단 네비게이션 */
 export function Header({ mobileOnly = false }: { mobileOnly?: boolean }) {
-  const { user, isConfigured, signOut } = useAuth()
+  const { user, loading, isConfigured, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const canAccessPrivate = !isConfigured || Boolean(user)
+  const navItems = getNavItems(canAccessPrivate)
 
   useEffect(() => {
     setMenuOpen(false)
@@ -221,7 +253,7 @@ export function Header({ mobileOnly = false }: { mobileOnly?: boolean }) {
                 <div className="hidden h-5 w-px bg-border sm:block" />
               )}
 
-              {isConfigured && user && (
+              {isConfigured && !loading && user && (
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -229,6 +261,19 @@ export function Header({ mobileOnly = false }: { mobileOnly?: boolean }) {
                 >
                   로그아웃
                 </button>
+              )}
+              {isConfigured && !loading && !user && (
+                <NavLink
+                  to="/login"
+                  className={({ isActive }) =>
+                    [
+                      'text-xs font-medium transition-colors',
+                      isActive ? 'text-main' : 'text-text-secondary hover:text-main',
+                    ].join(' ')
+                  }
+                >
+                  로그인
+                </NavLink>
               )}
             </div>
           )}
@@ -240,6 +285,7 @@ export function Header({ mobileOnly = false }: { mobileOnly?: boolean }) {
           showDesktopNav={showDesktopNav}
           isConfigured={isConfigured}
           user={user}
+          navItems={navItems}
           onClose={() => setMenuOpen(false)}
           onSignOut={handleSignOut}
         />

@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react'
-import type { CalendarEvent, EventCategory, EventCategoryMeta } from '../../types/calendar'
-import { eventDebugLog } from '../../utils/eventDebugLog'
+import { useEffect, useState } from "react";
+import type {
+  CalendarEvent,
+  EventCategory,
+  EventCategoryMeta,
+} from "../../types/calendar";
+import { eventDebugLog } from "../../utils/eventDebugLog";
 import {
   buildEventDateTime,
   formatEventFormSnapshot,
@@ -12,62 +16,62 @@ import {
   splitLocalDateTime,
   syncEventFormFromDom,
   validateEventForm,
-} from '../../utils/calendarUtils'
+} from "../../utils/calendarUtils";
 import {
   clearEventNotificationHistory,
   requestNotificationPermission,
-} from '../../utils/eventNotifications'
-import { DatePicker } from '../ui/DatePicker'
-import { Modal } from '../ui/Modal'
-import { Select } from '../ui/Select'
-import { TimePicker } from '../ui/TimePicker'
-import { Toggle } from '../ui/Toggle'
+} from "../../utils/eventNotifications";
+import { DatePicker } from "../ui/DatePicker";
+import { Modal } from "../ui/Modal";
+import { Select } from "../ui/Select";
+import { TimePicker } from "../ui/TimePicker";
+import { Toggle } from "../ui/Toggle";
 
-export type EventModalMode = 'create' | 'edit'
+export type EventModalMode = "create" | "edit";
 
 interface EventModalProps {
-  isOpen: boolean
-  mode: EventModalMode
-  event: CalendarEvent | null
-  categories: EventCategoryMeta[]
-  onClose: () => void
-  onSave: (event: CalendarEvent) => Promise<void>
-  onDelete?: (id: string) => void
+  isOpen: boolean;
+  mode: EventModalMode;
+  event: CalendarEvent | null;
+  categories: EventCategoryMeta[];
+  onClose: () => void;
+  onSave: (event: CalendarEvent) => Promise<void>;
+  onDelete?: (id: string) => void;
 }
 
 interface EventForm {
-  title: string
-  allDay: boolean
-  startDate: string
-  startTime: string
-  endDate: string
-  endTime: string
-  category: EventCategory
-  description: string
-  notify: boolean
+  title: string;
+  allDay: boolean;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  category: EventCategory;
+  description: string;
+  notify: boolean;
 }
 
 const emptyForm = (defaultStart?: string): EventForm => {
-  const isTimed = defaultStart?.includes('T')
+  const isTimed = defaultStart?.includes("T");
   const { date: startDate, time: startTime } = defaultStart
     ? splitLocalDateTime(defaultStart)
-    : { date: localToday(), time: '09:00' }
+    : { date: localToday(), time: "09:00" };
 
   return {
-    title: '',
+    title: "",
     allDay: !isTimed,
     startDate,
-    startTime: isTimed ? startTime : '09:00',
-    endDate: '',
-    endTime: '',
-    category: 'personal',
-    description: '',
+    startTime: isTimed ? startTime : "09:00",
+    endDate: "",
+    endTime: "",
+    category: "personal",
+    description: "",
     notify: false,
-  }
-}
+  };
+};
 
 const fieldClass =
-  'w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-main focus:ring-2 focus:ring-main/20'
+  "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-main focus:ring-2 focus:ring-main/20";
 
 /** 일정 추가/수정/삭제 모달 — 종일·시간 지정 지원 */
 export function EventModal({
@@ -79,52 +83,52 @@ export function EventModal({
   onSave,
   onDelete,
 }: EventModalProps) {
-  const [form, setForm] = useState<EventForm>(emptyForm())
+  const [form, setForm] = useState<EventForm>(emptyForm());
   const [formError, setFormError] = useState<{
-    message: string
-    snapshot?: string
-  } | null>(null)
-  const [saving, setSaving] = useState(false)
+    message: string;
+    snapshot?: string;
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return
-    setFormError(null)
-    setSaving(false)
+    if (!isOpen) return;
+    setFormError(null);
+    setSaving(false);
 
-    if (mode === 'edit' && event) {
-      const allDay = isAllDayEvent(event)
-      const startParts = splitLocalDateTime(event.start)
-      const endParts = event.end ? splitLocalDateTime(event.end) : null
+    if (mode === "edit" && event) {
+      const allDay = isAllDayEvent(event);
+      const startParts = splitLocalDateTime(event.start);
+      const endParts = event.end ? splitLocalDateTime(event.end) : null;
 
       setForm({
         title: event.title,
         allDay,
         startDate: startParts.date,
-        startTime: allDay ? '09:00' : startParts.time,
-        endDate: endParts?.date ?? '',
-        endTime: allDay ? '' : (endParts?.time ?? ''),
+        startTime: allDay ? "09:00" : startParts.time,
+        endDate: endParts?.date ?? "",
+        endTime: allDay ? "" : (endParts?.time ?? ""),
         category: event.category,
-        description: event.description ?? '',
+        description: event.description ?? "",
         notify: event.notify ?? false,
-      })
+      });
     } else {
-      setForm(emptyForm(event?.start))
+      setForm(emptyForm(event?.start));
     }
-  }, [isOpen, mode, event])
+  }, [isOpen, mode, event]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (saving) return
+    e.preventDefault();
+    if (saving) return;
 
-    const rawInputs = readEventFormRawInputs(e.currentTarget)
-    eventDebugLog('EventModal: submit raw DOM', rawInputs)
+    const rawInputs = readEventFormRawInputs(e.currentTarget);
+    eventDebugLog("EventModal: submit raw DOM", rawInputs);
 
-    const syncedForm = syncEventFormFromDom(form, e.currentTarget)
+    const syncedForm = syncEventFormFromDom(form, e.currentTarget);
     const normalizedForm = syncedForm.allDay
       ? syncedForm
-      : normalizeTimedForm(syncedForm)
-    setForm(normalizedForm)
-    eventDebugLog('EventModal: submit normalized form', normalizedForm)
+      : normalizeTimedForm(syncedForm);
+    setForm(normalizedForm);
+    eventDebugLog("EventModal: submit normalized form", normalizedForm);
 
     const validation = validateEventForm(
       {
@@ -132,31 +136,31 @@ export function EventModal({
         title: normalizedForm.title,
       },
       rawInputs,
-    )
+    );
     if (validation.error) {
-      eventDebugLog('EventModal: 클라이언트 검증 실패', validation)
+      eventDebugLog("EventModal: 클라이언트 검증 실패", validation);
       setFormError({
         message: validation.error,
         snapshot: validation.snapshot,
-      })
-      return
+      });
+      return;
     }
 
     const start = buildEventDateTime(
       normalizedForm.startDate,
       normalizedForm.startTime,
       normalizedForm.allDay,
-    )
+    );
 
-    let end: string | undefined
+    let end: string | undefined;
     if (normalizedForm.allDay) {
-      end = normalizedForm.endDate || undefined
+      end = normalizedForm.endDate || undefined;
     } else {
-      end = resolveTimedEventEnd(normalizedForm)
+      end = resolveTimedEventEnd(normalizedForm);
     }
 
     const payload: CalendarEvent = {
-      id: mode === 'edit' && event ? event.id : '',
+      id: mode === "edit" && event ? event.id : "",
       title: normalizedForm.title.trim(),
       start,
       end,
@@ -164,47 +168,47 @@ export function EventModal({
       description: normalizedForm.description.trim() || undefined,
       allDay: normalizedForm.allDay,
       notify: normalizedForm.notify,
-    }
+    };
 
-    eventDebugLog('EventModal: Supabase 저장 payload', payload)
+    eventDebugLog("EventModal: Supabase 저장 payload", payload);
 
-    setSaving(true)
-    setFormError(null)
+    setSaving(true);
+    setFormError(null);
     try {
-      if (mode === 'edit' && event?.id) {
-        clearEventNotificationHistory(event.id)
+      if (mode === "edit" && event?.id) {
+        clearEventNotificationHistory(event.id);
       }
-      await onSave(payload)
-      onClose()
+      await onSave(payload);
+      onClose();
     } catch (err) {
-      eventDebugLog('EventModal: 저장 catch', {
+      eventDebugLog("EventModal: 저장 catch", {
         message: err instanceof Error ? err.message : err,
         payload,
-      })
+      });
       const message =
-        err instanceof Error ? err.message : '일정을 저장하지 못했습니다.'
+        err instanceof Error ? err.message : "일정을 저장하지 못했습니다.";
       setFormError({
         message,
         snapshot: formatEventFormSnapshot(normalizedForm, rawInputs),
-      })
+      });
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDelete = () => {
-    if (mode === 'edit' && event && onDelete) {
-      clearEventNotificationHistory(event.id)
-      onDelete(event.id)
-      onClose()
+    if (mode === "edit" && event && onDelete) {
+      clearEventNotificationHistory(event.id);
+      onDelete(event.id);
+      onClose();
     }
-  }
+  };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'create' ? '일정 추가' : '일정 수정'}
+      title={mode === "create" ? "일정 추가" : "일정 수정"}
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {formError && (
@@ -235,16 +239,16 @@ export function EventModal({
           onChange={(allDay) => {
             setForm((prev) => {
               if (allDay) {
-                return { ...prev, allDay, endTime: '' }
+                return { ...prev, allDay, endTime: "" };
               }
-              return { ...prev, allDay, endDate: '', endTime: '' }
-            })
+              return { ...prev, allDay, endDate: "", endTime: "" };
+            });
           }}
           label="종일 일정"
           description={
             form.allDay
-              ? '하루 종일 또는 기간으로 저장됩니다.'
-              : '시작·종료 시간을 지정합니다.'
+              ? "하루 종일 또는 기간으로 저장됩니다."
+              : "시작·종료 시간을 지정합니다."
           }
         />
 
@@ -321,7 +325,8 @@ export function EventModal({
                   setForm((prev) => ({
                     ...prev,
                     endTime,
-                    endDate: endTime && !prev.endDate ? prev.startDate : prev.endDate,
+                    endDate:
+                      endTime && !prev.endDate ? prev.startDate : prev.endDate,
                   }))
                 }
                 placeholder="13:00"
@@ -348,16 +353,16 @@ export function EventModal({
           checked={form.notify}
           onChange={async (notify) => {
             if (notify) {
-              const granted = await requestNotificationPermission()
-              if (!granted) return
+              const granted = await requestNotificationPermission();
+              if (!granted) return;
             }
-            setForm((prev) => ({ ...prev, notify }))
+            setForm((prev) => ({ ...prev, notify }));
           }}
           label="브라우저 알림"
           description={
             form.allDay
-              ? '종일 일정은 당일 09:00에 알려드려요. Dashboard 탭이 열려 있어야 합니다.'
-              : '일정 시작 시간에 알려드려요. Dashboard 탭이 열려 있어야 합니다.'
+              ? "종일 일정은 당일 09:00에 알려드려요. Dashboard 탭이 열려 있어야 합니다."
+              : "일정 시작 시간에 알려드려요. Dashboard 탭이 열려 있어야 합니다."
           }
         />
 
@@ -375,7 +380,7 @@ export function EventModal({
         </div>
 
         <div className="sticky bottom-0 -mx-1 mt-2 flex items-center justify-between border-t border-border/70 bg-surface-card/95 px-1 pt-4 backdrop-blur-sm">
-          {mode === 'edit' && onDelete ? (
+          {mode === "edit" && onDelete ? (
             <button
               type="button"
               onClick={handleDelete}
@@ -399,11 +404,11 @@ export function EventModal({
               disabled={saving}
               className="rounded-xl bg-main px-4 py-2 text-sm font-medium text-white hover:bg-main-dark disabled:opacity-50"
             >
-              {saving ? '저장 중…' : mode === 'create' ? '추가' : '저장'}
+              {saving ? "저장 중…" : mode === "create" ? "추가" : "저장"}
             </button>
           </div>
         </div>
       </form>
     </Modal>
-  )
+  );
 }

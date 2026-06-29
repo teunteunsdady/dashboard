@@ -1,19 +1,27 @@
-import { useState } from 'react'
-import { CalendarView, type CalendarViewType } from '../components/calendar/CalendarView'
-import { EventModal, type EventModalMode } from '../components/calendar/EventModal'
-import { EventNotificationBanner } from '../components/calendar/EventNotificationBanner'
-import { useEvents } from '../hooks/useEvents'
-import { useEventNotifications } from '../hooks/useEventNotifications'
-import { isSupabaseConfigured } from '../lib/supabase'
-import type { CalendarEvent } from '../types/calendar'
+import { useState } from "react";
+import {
+  CalendarView,
+  type CalendarViewType,
+} from "../components/calendar/CalendarView";
+import {
+  EventModal,
+  type EventModalMode,
+} from "../components/calendar/EventModal";
+import { EventNotificationBanner } from "../components/calendar/EventNotificationBanner";
+import { TodayEventsPanel } from "../components/calendar/TodayEventsPanel";
+import { useEvents } from "../hooks/useEvents";
+import { useEventNotifications } from "../hooks/useEventNotifications";
+import { isSupabaseConfigured } from "../lib/supabase";
+import type { CalendarEvent } from "../types/calendar";
+import { localToday } from "../utils/calendarUtils";
 
 interface ModalState {
-  isOpen: boolean
-  mode: EventModalMode
-  event: CalendarEvent | null
+  isOpen: boolean;
+  mode: EventModalMode;
+  event: CalendarEvent | null;
 }
 
-const closedModal: ModalState = { isOpen: false, mode: 'create', event: null }
+const closedModal: ModalState = { isOpen: false, mode: "create", event: null };
 
 /** Dashboard 페이지 — FullCalendar 일정 관리 */
 export function DashboardPage() {
@@ -30,31 +38,32 @@ export function DashboardPage() {
     deleteEvent,
     moveEvent,
     clearError,
-  } = useEvents()
+  } = useEvents();
 
-  useEventNotifications(events)
+  useEventNotifications(events);
 
-  const [modal, setModal] = useState<ModalState>(closedModal)
-  const [calendarView, setCalendarView] = useState<CalendarViewType>('dayGridMonth')
+  const [modal, setModal] = useState<ModalState>(closedModal);
+  const [calendarView, setCalendarView] =
+    useState<CalendarViewType>("dayGridMonth");
 
   const openCreate = (start?: string, allDay = true) => {
     setModal({
       isOpen: true,
-      mode: 'create',
+      mode: "create",
       event: start
-        ? { id: '', title: '', start, category: 'personal', allDay }
+        ? { id: "", title: "", start, category: "personal", allDay }
         : null,
-    })
-  }
+    });
+  };
 
   const openEdit = (event: CalendarEvent) => {
-    setModal({ isOpen: true, mode: 'edit', event })
-  }
+    setModal({ isOpen: true, mode: "edit", event });
+  };
 
-  const closeModal = () => setModal(closedModal)
+  const closeModal = () => setModal(closedModal);
 
   const handleSave = async (event: CalendarEvent) => {
-    if (modal.mode === 'create') {
+    if (modal.mode === "create") {
       await addEvent({
         title: event.title,
         start: event.start,
@@ -63,18 +72,18 @@ export function DashboardPage() {
         description: event.description,
         allDay: event.allDay,
         notify: event.notify,
-      })
+      });
     } else {
-      await updateEvent(event)
+      await updateEvent(event);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-main/20 border-t-main" />
       </div>
-    )
+    );
   }
 
   return (
@@ -90,12 +99,20 @@ export function DashboardPage() {
 
       {!isSupabaseConfigured() && (
         <p className="mb-4 rounded-xl border border-sub/30 bg-sub/10 px-4 py-3 text-sm text-text-secondary">
-          Supabase 미연동 — 일정은 이 브라우저에만 저장됩니다.{' '}
-          <code className="text-xs">.env</code> 설정 후 클라우드 동기화를 사용하세요.
+          Supabase 미연동 — 일정은 이 브라우저에만 저장됩니다.{" "}
+          <code className="text-xs">.env</code> 설정 후 클라우드 동기화를
+          사용하세요.
         </p>
       )}
 
       <EventNotificationBanner events={events} />
+
+      <TodayEventsPanel
+        events={filteredEvents}
+        categories={categories}
+        onEventClick={openEdit}
+        onAddClick={() => openCreate(localToday(), true)}
+      />
 
       <CalendarView
         events={filteredEvents}
@@ -120,5 +137,5 @@ export function DashboardPage() {
         onDelete={deleteEvent}
       />
     </div>
-  )
+  );
 }

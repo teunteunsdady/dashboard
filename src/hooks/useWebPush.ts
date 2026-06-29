@@ -67,7 +67,9 @@ export function useWebPush() {
       const subscription = await subscribeToPush()
       if (!subscription) {
         setStatus('unsubscribed')
-        setError('Push 구독에 실패했습니다.')
+        setError(
+          'Push 구독에 실패했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.',
+        )
         return false
       }
 
