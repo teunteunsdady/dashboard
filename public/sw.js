@@ -1,6 +1,20 @@
 /* eslint-disable no-restricted-globals */
 /** Web Push 수신 — 탭이 꺼져 있어도 OS 알림 표시 */
 
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting())
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
 self.addEventListener('push', (event) => {
   let payload = { title: '일정 알림', body: '', tag: 'event', url: '/dashboard' }
 

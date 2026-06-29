@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import webpush from "npm:web-push@3.6.7";
 
 const NOTIFY_TZ = "Asia/Seoul";
-const CACHE_TTL_MS = Math.floor((24 * 60 * 60 * 1000) / 1000);
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const SEOUL_BUS_BASE =
   "http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid";
 

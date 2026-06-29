@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { APP_NAME_PREFIX, APP_NAME_SUFFIX } from '../../constants/brand'
+import { isStandalonePwa, reloadApp } from '../../utils/pwa'
 
 interface NavItem {
   label: string
@@ -83,6 +84,7 @@ function MobileMenuOverlay({
   isConfigured,
   user,
   navItems,
+  showAppReload,
   onClose,
   onSignOut,
 }: {
@@ -90,6 +92,7 @@ function MobileMenuOverlay({
   isConfigured: boolean
   user: ReturnType<typeof useAuth>['user']
   navItems: NavItem[]
+  showAppReload: boolean
   onClose: () => void
   onSignOut: () => void
 }) {
@@ -134,6 +137,22 @@ function MobileMenuOverlay({
             </li>
           ))}
         </ul>
+
+        {showAppReload && (
+          <>
+            <div className="my-3 h-px bg-border/50" />
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                reloadApp()
+              }}
+              className="block w-full rounded-2xl px-5 py-3.5 text-center text-base font-medium text-main transition-colors hover:bg-main/5"
+            >
+              앱 새로고침
+            </button>
+          </>
+        )}
 
         {isConfigured && user && (
           <>
@@ -208,6 +227,7 @@ export function Header({ mobileOnly = false }: { mobileOnly?: boolean }) {
   }
 
   const showDesktopNav = !mobileOnly
+  const showAppReload = isStandalonePwa()
 
   return (
     <header className="sticky top-0 z-[60] border-b border-border/60 bg-surface/80 backdrop-blur-md">
@@ -301,6 +321,7 @@ export function Header({ mobileOnly = false }: { mobileOnly?: boolean }) {
           isConfigured={isConfigured}
           user={user}
           navItems={navItems}
+          showAppReload={showAppReload}
           onClose={() => setMenuOpen(false)}
           onSignOut={handleSignOut}
         />

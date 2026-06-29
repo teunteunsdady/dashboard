@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { BusAlarmWatcher } from './components/bus/BusAlarmWatcher'
+import { AppUpdateBanner } from './components/ui/AppUpdateBanner'
 import { BusLayout } from './components/layout/BusLayout'
 import { MainLayout } from './components/layout/MainLayout'
 import { AboutPage } from './pages/AboutPage'
@@ -19,6 +20,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <AppUpdateBanner />
         <BusAlarmWatcher />
         <Routes>
           <Route
