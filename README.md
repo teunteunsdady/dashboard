@@ -15,12 +15,12 @@
 | Dashboard | `/dashboard` | FullCalendar 일정 관리 (Supabase 연동 시 로그인 필요) |
 | Ledger | `/ledger` | 가계부 (로그인 필요) |
 | Bus | `/bus` | 서울시 버스 도착 정보 (모바일 UI, 정류장 3곳) |
-| Login | `/login` | Supabase 이메일·아이디(`readOnly`) 로그인 |
+| Login | `/login` | Supabase 이메일·아이디(`readOnly` / `readOnly2`) 로그인 |
 
 ### Dashboard
 
 - 월간 / 주간 캘린더 뷰
-- 카테고리 필터 (개인, 금융, 구독, 취업, 가족, 교회)
+- 카테고리 필터 (개인, 회사, 구독, 취업, 가족, 교회)
 - 드래그로 일정 이동, 클릭으로 추가·수정
 - Supabase 미설정 시 브라우저 `localStorage`에 저장
 
@@ -33,8 +33,9 @@
 
 ### 기타
 
-- **Web Push** 백그라운드 일정 알림 — [docs/web-push.md](docs/web-push.md)
-- **readOnly** 읽기 전용 계정 — [docs/readonly-account.md](docs/readonly-account.md)
+- **Web Push** 백그라운드 일정·버스 도착 알림 — [docs/web-push.md](docs/web-push.md) · [docs/bus-arrival-alerts.md](docs/bus-arrival-alerts.md)
+- **readOnly / readOnly2** 읽기 전용 계정 — [docs/readonly-account.md](docs/readonly-account.md)
+- **스케줄(cron)** Supabase pg_cron (일정·버스 Push 5분, readOnly 비밀번호 매일)
 - **운영·장애 대응** — [docs/runbook.md](docs/runbook.md) · [docs/README.md](docs/README.md)
 
 ---

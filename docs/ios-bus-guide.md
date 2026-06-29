@@ -124,4 +124,4 @@ API 일일 호출 제한을 고려해 실행 횟수는 적게 설정하세요.
 ## 참고
 
 - **네이티브 iOS 위젯**: Swift 앱 + WidgetKit 필요 (현재 웹 프로젝트만으로는 불가)
-- **자동 푸시 알림**: PWA + 웹 푸시 + 서버 스케줄러 구현 시 가능 (추후 검토)
+- **도착 푸시 알림**: [bus-arrival-alerts.md](./bus-arrival-alerts.md) — Web Push + pg_cron (owner, Push 구독 필요)

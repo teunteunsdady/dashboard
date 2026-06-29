@@ -26,7 +26,12 @@
 
 Dashboard → **Edge Functions → Secrets**
 
-`CRON_SECRET`, `VAPID_*`, `READONLY_*` 가 Edge Function과 `.env` / Vault와 **일치**해야 합니다.
+| Secret | 용도 |
+|--------|------|
+| `CRON_SECRET` | pg_cron · Edge Function (`.env` / Vault와 일치) |
+| `VAPID_*` | 일정·버스 Web Push |
+| `SEOUL_BUS_API_KEY` | `send-bus-arrival-reminders` |
+| `READONLY_*` | readOnly / readOnly2 비밀번호 |
 
 ---
 
@@ -37,12 +42,14 @@ Dashboard → **Edge Functions → Secrets**
 | 증상 | 확인 | 조치 |
 |------|------|------|
 | owner 이메일 로그인 실패 | Supabase → Authentication → Users | 비밀번호 재설정 |
-| `readOnly` 로그인 실패 | 아이디 `readOnly` | 당월 비밀번호 `Qkdzk!YYMM` 확인 |
+| `readOnly` 로그인 실패 | 아이디 `readOnly` | 당월 `Qkdzk!YYMM` |
+| `readOnly2` 로그인 실패 | 아이디 `readOnly2` | 동일 비밀번호 규칙 |
+| readOnly2에 회사 일정 보임 | RLS / scope | `readonly_scope = personal_events` 확인 |
 | 1일 이후 readOnly 갑자기 실패 | 자동 비밀번호 변경 | [readonly-cron.md](./readonly-cron.md) |
 | Supabase 미연동 메시지 | Vercel `VITE_SUPABASE_*` | 값 확인 후 재배포 |
 
 ```sql
-select p.id, u.email, p.app_role, p.data_owner_id
+select u.email, p.app_role, p.readonly_scope, p.data_owner_id
 from public.profiles p
 join auth.users u on u.id = p.id;
 ```
@@ -72,9 +79,10 @@ order by starts_at desc limit 10;
 |------|------|------|
 | 1 | Dashboard 백그라운드 알림 구독 | `push_subscriptions`에 행 |
 | 2 | 일정 notify 켜짐 | `notify_enabled = true` |
-| 3 | cron-job.org | 5분마다 200 |
+| 3 | pg_cron | `send-push-reminders-5min` active |
 | 4 | Edge Function 로그 | `send-event-reminders` |
 | 5 | iOS | 홈 화면 추가 후 실행 |
+| 6 | cron-job.org Job 남음 | **비활성화** — 중복 알림 원인 |
 
 ```powershell
 Invoke-RestMethod -Method POST `
@@ -91,6 +99,7 @@ Invoke-RestMethod -Method POST `
 ```sql
 select * from public.push_subscriptions;
 select * from public.event_push_dispatches order by sent_at desc limit 10;
+select jobname, schedule, active from cron.job where jobname = 'send-push-reminders-5min';
 ```
 
 **로그:** Supabase → Edge Functions → `send-event-reminders` → Logs
@@ -103,22 +112,21 @@ select * from public.event_push_dispatches order by sent_at desc limit 10;
 
 | 확인 | SQL / 위치 |
 |------|------------|
-| pg_cron Job | `select jobname, schedule, active from cron.job;` |
-| Vault | `select name from vault.secrets where name in ('cron_secret','supabase_anon_key');` |
-| HTTP 결과 | `select status_code, left(content,200), error_msg from net._http_response order by id desc limit 5;` |
+| pg_cron Job | `rotate-readonly-password-daily` |
+| Vault | `cron_secret`, `supabase_anon_key` |
+| HTTP 결과 | `net._http_response` |
 | EF 로그 | `rotate-readonly-password` → Logs |
 
 ```powershell
 Invoke-RestMethod -Method POST `
-  -Uri ".../rotate-readonly-password?action=preview" `
+  -Uri "https://pwkagsqphsfvuvbzclqy.supabase.co/functions/v1/rotate-readonly-password?action=preview" `
   -Headers @{ Authorization = "Bearer $secret"; apikey = $anon }
 ```
 
 | 응답 | 의미 |
 |------|------|
-| `401` + authentication required | POST + Bearer + apikey 필요 |
+| `accounts` 배열 | readOnly + readOnly2 각각 rotate 결과 |
 | `skipped: true` | KST 1일 아님 (정상) |
-| `appliedPassword` | 변경 성공 |
 
 ```sql
 select public.invoke_rotate_readonly_password();
@@ -147,21 +155,36 @@ order by usage_date desc limit 7;
 
 ### 버스 도착 알림이 안 옴
 
+상세: [bus-arrival-alerts.md](./bus-arrival-alerts.md)
+
 | 확인 | 조치 |
 |------|------|
-| Bus → 도착 알림 켜짐 | 토글 + 알림 권한 허용 |
-| 오늘이 알림 요일·시간인지 | 기본 수·일, 7–10 / 17–21 |
-| 탭이 열려 있는지 | 백그라운드·잠금 화면에서는 미동작 |
-| API 한도 | `get_bus_api_quota()` — 남은 횟수 0이면 조회 실패 |
+| Dashboard Web Push 구독 | `push_subscriptions` |
+| Bus → 도착 알림 ON | `bus_alarm_settings.enabled = true` |
+| 요일·시간대 | 기본 수·일, 7–10 / 17–21 |
+| pg_cron | `send-push-reminders-5min` |
+| API 한도 | `get_bus_api_quota()` |
 
-설정은 `localStorage` (`cyanorbit-yol-bus-alarm`)에 저장됩니다.
+```powershell
+Invoke-RestMethod -Method POST `
+  -Uri "https://pwkagsqphsfvuvbzclqy.supabase.co/functions/v1/send-bus-arrival-reminders" `
+  -Headers @{ Authorization = "Bearer $secret"; apikey = $anon }
+```
+
+```sql
+select * from public.bus_alarm_settings where enabled = true;
+select * from public.bus_alarm_state;
+```
+
+Push 없을 때만 탭 열림 ~1분 폴백(`BusAlarmWatcher`)이 동작합니다.
 
 ---
 
 ### 가계부(Ledger) 오류
 
 - 로그인 필요
-- readOnly는 조회만
+- readOnly(full): 조회만
+- readOnly2: 접근 불가
 
 ---
 
@@ -184,17 +207,17 @@ order by usage_date desc limit 7;
 | Vercel 서버 | Vercel Dashboard → Logs |
 | Edge Function | Supabase → Edge Functions → Logs |
 | DB / RLS | Supabase → SQL Editor |
-| Web Push cron | cron-job.org → Job History |
-| readOnly cron | `cron.job`, `net._http_response` |
+| Web Push / 버스 cron | pg_cron `cron.job`, `invoke_scheduled_push_reminders` |
+| readOnly cron | `rotate-readonly-password-daily`, `net._http_response` |
 | Auth | Supabase → Authentication |
 
 ---
 
 ## 4. 자주 쓰는 복구
 
-**CRON_SECRET 변경 후:** Supabase Secrets → Vault (`setup-readonly-cron.sql`) → cron-job.org 헤더
+**CRON_SECRET 변경 후:** Supabase Secrets → Vault (`setup-readonly-cron.sql`)
 
-**readOnly 재연결:** `?action=setup` 또는 `setup-readonly-user.sql`
+**readOnly 재연결:** `?action=setup` / `?action=setup2` / `setup-all`
 
 **마이그레이션:**
 
@@ -205,8 +228,9 @@ npx supabase db query --linked -f supabase/migrations/파일명.sql
 **Edge Function 재배포:**
 
 ```bash
-npx supabase functions deploy send-event-reminders --project-ref pwkagsqphsfvuvbzclqy --no-verify-jwt
-npx supabase functions deploy rotate-readonly-password --project-ref pwkagsqphsfvuvbzclqy --no-verify-jwt
+npx supabase functions deploy send-event-reminders --project-ref pwkagsqphsfvuvbzclqy
+npx supabase functions deploy send-bus-arrival-reminders --project-ref pwkagsqphsfvuvbzclqy
+npx supabase functions deploy rotate-readonly-password --project-ref pwkagsqphsfvuvbzclqy
 ```
 
 ---
@@ -225,5 +249,6 @@ npx supabase functions deploy rotate-readonly-password --project-ref pwkagsqphsf
 - [docs/README.md](./README.md)
 - [features-overview.md](./features-overview.md)
 - [web-push.md](./web-push.md)
+- [bus-arrival-alerts.md](./bus-arrival-alerts.md)
 - [readonly-account.md](./readonly-account.md)
 - [readonly-cron.md](./readonly-cron.md)

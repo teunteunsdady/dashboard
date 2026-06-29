@@ -172,19 +172,32 @@ https://<프로젝트-ref>.supabase.co/functions/v1/send-event-reminders
 
 ### 4. Cron 설정 (필수)
 
-Edge Function은 **호출될 때만** 동작합니다. 5분마다 POST 요청을 보내야 합니다.
+Edge Function은 **호출될 때만** 동작합니다. **5분마다** POST가 필요합니다.
 
-**요청 예시**
+**권장: Supabase pg_cron** (레포에 포함)
+
+마이그레이션 `20260707_push_reminders_cron.sql` 적용 후:
+
+```sql
+select jobname, schedule, active from cron.job
+where jobname = 'send-push-reminders-5min';
+```
+
+이 Job이 `send-event-reminders`와 `send-bus-arrival-reminders`를 **한 번에** 호출합니다.
+
+**사전 준비:** `supabase/scripts/setup-readonly-cron.sql` 로 Vault에 `cron_secret`, `supabase_anon_key` 등록
+
+**수동 호출 예:**
 
 ```http
 POST https://<프로젝트-ref>.supabase.co/functions/v1/send-event-reminders
 Authorization: Bearer <CRON_SECRET>
+apikey: <VITE_SUPABASE_ANON_KEY>
 ```
 
-**설정 방법 (택 1)**
+> **cron-job.org는 더 이상 사용하지 않습니다.** 예전 Job이 남아 있으면 알림이 중복될 수 있습니다.
 
-- [cron-job.org](https://cron-job.org) 등 외부 cron
-- Supabase Dashboard → Edge Functions → **Schedules** (플랜/기능 지원 시)
+**대안:** Supabase Dashboard → Edge Functions → Schedules (플랜 지원 시)
 
 ### 5. 앱에서 구독 활성화
 
@@ -235,7 +248,7 @@ curl.exe -X POST "https://<프로젝트-ref>.supabase.co/functions/v1/send-event
 
 | 증상 | 원인 | 조치 |
 |------|------|------|
-| `401 Unauthorized` | `CRON_SECRET` 불일치 | `supabase secrets set CRON_SECRET=...` 후 cron 헤더 갱신 |
+| `401 Unauthorized` | `CRON_SECRET` 불일치 | Secrets · Vault · pg_cron 함수 확인 |
 | `500 Missing server configuration` | VAPID 시크릿 누락 | 4개 시크릿 모두 등록 확인 |
 | `notify_enabled` 저장 오류 | 마이그레이션 미실행 | `20260630_event_notify.sql` 실행 |
 | Push 구독 저장 오류 | Push 테이블 없음 | `20260701_web_push.sql` 실행 |
@@ -261,7 +274,7 @@ curl.exe -X POST "https://<프로젝트-ref>.supabase.co/functions/v1/send-event
 ## 보안 참고
 
 - `CRON_SECRET`, `VAPID_PRIVATE_KEY`는 외부에 노출하지 마세요.
-- 채팅·로그 등에 시크릿이 노출되면 `supabase secrets set`으로 **재발급**하고 cron 설정을 갱신하세요.
+- 채팅·로그 등에 시크릿이 노출되면 `supabase secrets set`으로 **재발급**하고 Vault를 갱신하세요.
 - `event_push_dispatches`는 RLS로 클라이언트 접근을 차단하고, Edge Function만 service role로 기록합니다.
 
 ---
